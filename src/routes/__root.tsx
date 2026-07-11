@@ -13,10 +13,12 @@ import {
   ClerkProvider,
   Show,
   SignInButton,
+  SignUpButton,
   UserButton,
   useAuth,
 } from '@clerk/tanstack-react-start'
 import { auth } from '@clerk/tanstack-react-start/server'
+import { shadcn } from '@clerk/ui/themes'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { ConvexReactClient } from 'convex/react'
 import { ConvexProviderWithClerk } from 'convex/react-clerk'
@@ -68,7 +70,7 @@ function RootComponent() {
   const { convexClient } = useRouteContext({ from: Route.id })
 
   return (
-    <ClerkProvider>
+    <ClerkProvider appearance={{ theme: shadcn }}>
       <ConvexProviderWithClerk client={convexClient} useAuth={useAuth}>
         <RootDocument>
           <Outlet />
@@ -88,9 +90,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <header className="flex items-center justify-between border-b border-slate-200 px-8 py-4">
           <span className="font-semibold">Kcal Count</span>
           <Show when="signed-out">
-            <SignInButton mode="modal">
-              <Button>Sign in</Button>
-            </SignInButton>
+            <div className="flex items-center gap-2">
+              <SignInButton mode="modal">
+                <Button variant="ghost">Sign in</Button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <Button>Sign up</Button>
+              </SignUpButton>
+            </div>
           </Show>
           <Show when="signed-in">
             <UserButton />
