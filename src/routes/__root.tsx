@@ -32,7 +32,7 @@ const fetchClerkAuth = createServerFn({ method: 'GET' }).handler(async () => {
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
   convexClient: ConvexReactClient
-  convexQueryClient: ConvexQueryClient<ConvexReactClient>
+  convexQueryClient: ConvexQueryClient
 }>()({
   head: () => ({
     meta: [
