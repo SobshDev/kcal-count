@@ -1,56 +1,76 @@
+import { useState } from 'react'
+import {
+  AnimatePresence,
+  motion,
+  useMotionValueEvent,
+  useScroll,
+} from 'motion/react'
 import { Show, SignInButton, UserButton } from '@clerk/tanstack-react-start'
 
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = ['Dashboard', 'Statistics', 'Settings'] as const
 
+/**
+ * Adapted from Aceternity UI's Floating Navbar: it hides when scrolling down
+ * and reveals when scrolling up. Unlike the original (which hides at the very
+ * top of the page), this stays visible near the top so it always shows on the
+ * short landing page. Widened and restyled to match the sign-up page.
+ */
 export function FloatingNavbar() {
+  const { scrollYProgress } = useScroll()
+  const [visible, setVisible] = useState(true)
+
+  useMotionValueEvent(scrollYProgress, 'change', (current) => {
+    if (typeof current !== 'number') return
+    const previous = scrollYProgress.getPrevious() ?? 0
+    const direction = current - previous
+
+    if (current < 0.05) {
+      setVisible(true)
+    } else {
+      setVisible(direction < 0)
+    }
+  })
+
   return (
-    <nav className="fixed inset-x-0 top-8 z-50 flex justify-center px-4">
-      <div
-        className={cn(
-          'relative flex items-center gap-3 rounded-2xl px-4 py-2.5',
-          'border border-white/20 bg-background/50 backdrop-blur-2xl backdrop-saturate-150',
-          'shadow-xl shadow-black/10 ring-1 ring-white/10 ring-inset',
-          // Glossy top-edge highlight/sheen that fades toward the bottom.
-          'before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl',
-          'before:bg-gradient-to-b before:from-white/25 before:to-transparent',
-          'before:[mask-image:linear-gradient(to_bottom,black,transparent_60%)]',
-        )}
+    <AnimatePresence mode="wait">
+      <motion.nav
+        initial={{ opacity: 1, y: 0 }}
+        animate={{ y: visible ? 0 : -120, opacity: visible ? 1 : 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-x-0 top-6 z-50 mx-auto flex w-[min(94vw,80rem)] items-center justify-between gap-6 rounded-2xl border border-white/10 bg-[oklch(0.19_0_0)] px-6 py-3 shadow-[0_24px_70px_-24px_rgba(0,0,0,0.7)]"
       >
-        <div className="relative flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {NAV_ITEMS.map((item) => (
             <Button
               key={item}
               variant="ghost"
               size="default"
-              className="rounded-xl px-4"
+              className="rounded-xl px-4 text-white/70 hover:bg-white/10 hover:text-white"
             >
               {item}
             </Button>
           ))}
-
-          <div className="mx-2 h-6 w-px bg-border/60" />
-
-          <div className="flex items-center pl-1">
-            <Show when="signed-in">
-              <UserButton />
-            </Show>
-            <Show when="signed-out">
-              <SignInButton mode="redirect">
-                <Button
-                  variant="ghost"
-                  size="default"
-                  className="rounded-xl px-4"
-                >
-                  Sign in
-                </Button>
-              </SignInButton>
-            </Show>
-          </div>
         </div>
-      </div>
-    </nav>
+
+        <div className="flex items-center">
+          <Show when="signed-in">
+            <UserButton />
+          </Show>
+          <Show when="signed-out">
+            <SignInButton mode="redirect">
+              <Button
+                variant="ghost"
+                size="default"
+                className="rounded-xl px-4 text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                Sign in
+              </Button>
+            </SignInButton>
+          </Show>
+        </div>
+      </motion.nav>
+    </AnimatePresence>
   )
 }
