@@ -82,8 +82,9 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const isAuthRoute = useRouterState({
+  const hideHeader = useRouterState({
     select: ({ location }) =>
+      location.pathname === '/' ||
       location.pathname.startsWith('/sign-in') ||
       location.pathname.startsWith('/sign-up'),
   })
@@ -94,7 +95,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {!isAuthRoute && (
+        {!hideHeader && (
           <header className="flex items-center justify-between border-b border-border px-8 py-4">
             <span className="font-semibold">Kcal Count</span>
             <Show when="signed-out">
