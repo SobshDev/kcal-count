@@ -1,3 +1,15 @@
-import { defineSchema } from 'convex/server'
+import { defineSchema, defineTable } from 'convex/server'
 
-export default defineSchema({})
+import { nutritionTargetValidator } from './nutritionTargets'
+
+export default defineSchema({
+  nutritionTargets: defineTable(nutritionTargetValidator)
+    .index('by_ownerTokenIdentifier_and_metric', [
+      'ownerTokenIdentifier',
+      'metric',
+    ])
+    .index('by_ownerTokenIdentifier_and_effectiveFrom', [
+      'ownerTokenIdentifier',
+      'effectiveFrom',
+    ]),
+})
