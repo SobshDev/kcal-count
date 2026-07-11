@@ -19,6 +19,7 @@ import {
   useAuth,
 } from '@clerk/tanstack-react-start'
 import { auth } from '@clerk/tanstack-react-start/server'
+import { shadcn } from '@clerk/ui/themes'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { ConvexReactClient } from 'convex/react'
 import { ConvexProviderWithClerk } from 'convex/react-clerk'
@@ -70,7 +71,7 @@ function RootComponent() {
   const { convexClient } = useRouteContext({ from: Route.id })
 
   return (
-    <ClerkProvider>
+    <ClerkProvider appearance={{ theme: shadcn }}>
       <ConvexProviderWithClerk client={convexClient} useAuth={useAuth}>
         <RootDocument>
           <Outlet />
