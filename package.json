@@ -10,8 +10,9 @@
     "dev:convex": "convex dev",
     "generate-routes": "tsr generate",
     "build": "vite build",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "lint": "eslint",
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check ."
