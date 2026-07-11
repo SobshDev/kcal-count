@@ -18,15 +18,14 @@ const NAV_ITEMS = ['Dashboard', 'Statistics', 'Settings'] as const
  * short landing page. Widened and restyled to match the sign-up page.
  */
 export function FloatingNavbar() {
-  const { scrollYProgress } = useScroll()
+  const { scrollY } = useScroll()
   const [visible, setVisible] = useState(true)
 
-  useMotionValueEvent(scrollYProgress, 'change', (current) => {
-    if (typeof current !== 'number') return
-    const previous = scrollYProgress.getPrevious() ?? 0
+  useMotionValueEvent(scrollY, 'change', (current) => {
+    const previous = scrollY.getPrevious() ?? 0
     const direction = current - previous
 
-    if (current < 0.05) {
+    if (current <= 40) {
       setVisible(true)
     } else {
       setVisible(direction < 0)
