@@ -20,6 +20,7 @@ import { auth } from '@clerk/tanstack-react-start/server'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { ConvexReactClient } from 'convex/react'
 import { ConvexProviderWithClerk } from 'convex/react-clerk'
+import { Button } from '@/components/ui/button'
 
 import appCss from '../styles.css?url'
 
@@ -88,9 +89,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <span className="font-semibold">Kcal Count</span>
           <Show when="signed-out">
             <SignInButton mode="modal">
-              <button className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white">
-                Sign in
-              </button>
+              <Button>Sign in</Button>
             </SignInButton>
           </Show>
           <Show when="signed-in">
