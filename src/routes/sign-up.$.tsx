@@ -1,14 +1,17 @@
-import { SignUp } from '@clerk/tanstack-react-start'
 import { createFileRoute } from '@tanstack/react-router'
+import { AuthShell } from '@/components/auth/auth-shell'
+import { SignUpForm } from '@/components/auth/sign-up-form'
 
-export const Route = createFileRoute('/sign-up/$')({
-  component: Page,
-})
+export const Route = createFileRoute('/sign-up/$')({ component: Page })
 
 function Page() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <SignUp />
-    </div>
+    <AuthShell
+      eyebrow="Start fresh"
+      title="Create your account"
+      description="A focused place for your nutrition, built around clarity rather than pressure."
+    >
+      <SignUpForm />
+    </AuthShell>
   )
 }
