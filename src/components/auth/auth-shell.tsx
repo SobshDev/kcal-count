@@ -19,10 +19,10 @@ export function AuthShell({
       <section className="relative hidden overflow-hidden border-r bg-[oklch(0.975_0.006_110)] px-14 py-12 lg:flex lg:flex-col">
         <Link
           to="/"
-          className="inline-flex w-fit items-center gap-2 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Back to home"
+          className="inline-flex size-9 w-fit items-center justify-center rounded-full border border-transparent text-foreground/70 transition-colors hover:border-border hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
-          Kcal Count
         </Link>
         <div className="my-auto max-w-xl pb-12">
           <p className="mb-7 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
@@ -35,19 +35,68 @@ export function AuthShell({
             Track what matters, understand your day, and move forward without
             the noise.
           </p>
-          <div className="mt-14 flex items-end gap-3" aria-hidden="true">
-            {[36, 58, 44, 76, 64, 88, 72].map((height, index) => (
-              <div
-                key={index}
-                className="w-8 rounded-full bg-foreground/[0.08]"
-                style={{ height }}
-              >
-                <div
-                  className="w-full rounded-full bg-foreground/80"
-                  style={{ height: `${Math.max(12, height - 24)}px` }}
-                />
+          <div
+            className="mt-14 w-full max-w-xs rounded-2xl border bg-background p-6 shadow-sm"
+            aria-hidden="true"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                Today
+              </p>
+              <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                Goal 2,360
+              </span>
+            </div>
+            <div className="mt-5 flex items-center gap-5">
+              <div className="relative flex shrink-0 items-center justify-center">
+                <svg viewBox="0 0 120 120" className="size-24 -rotate-90">
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="52"
+                    fill="none"
+                    strokeWidth="9"
+                    className="stroke-foreground/10"
+                  />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="52"
+                    fill="none"
+                    strokeWidth="9"
+                    strokeLinecap="round"
+                    strokeDasharray="326.7"
+                    strokeDashoffset="104.5"
+                    className="stroke-foreground"
+                  />
+                </svg>
+                <div className="absolute flex flex-col items-center">
+                  <span className="text-lg font-semibold tracking-tight tabular-nums">
+                    1,840
+                  </span>
+                  <span className="text-[0.625rem] text-muted-foreground">
+                    kcal
+                  </span>
+                </div>
               </div>
-            ))}
+              <div className="flex-1 space-y-3 text-sm">
+                {[
+                  { label: 'Protein', value: '96 g' },
+                  { label: 'Carbs', value: '180 g' },
+                  { label: 'Fat', value: '58 g' },
+                ].map((macro) => (
+                  <div
+                    key={macro.label}
+                    className="flex items-center justify-between"
+                  >
+                    <span className="text-muted-foreground">{macro.label}</span>
+                    <span className="font-medium tabular-nums">
+                      {macro.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
