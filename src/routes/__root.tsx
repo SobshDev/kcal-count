@@ -4,6 +4,7 @@ import {
   Scripts,
   createRootRouteWithContext,
   useRouteContext,
+  useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
@@ -13,6 +14,7 @@ import {
   ClerkProvider,
   Show,
   SignInButton,
+  SignUpButton,
   UserButton,
   useAuth,
 } from '@clerk/tanstack-react-start'
@@ -79,23 +81,36 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const isAuthRoute = useRouterState({
+    select: ({ location }) =>
+      location.pathname.startsWith('/sign-in') ||
+      location.pathname.startsWith('/sign-up'),
+  })
+
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        <header className="flex items-center justify-between border-b border-slate-200 px-8 py-4">
-          <span className="font-semibold">Kcal Count</span>
-          <Show when="signed-out">
-            <SignInButton mode="modal">
-              <Button>Sign in</Button>
-            </SignInButton>
-          </Show>
-          <Show when="signed-in">
-            <UserButton />
-          </Show>
-        </header>
+        {!isAuthRoute && (
+          <header className="flex items-center justify-between border-b border-border px-8 py-4">
+            <span className="font-semibold">Kcal Count</span>
+            <Show when="signed-out">
+              <div className="flex items-center gap-2">
+                <SignInButton mode="redirect">
+                  <Button variant="ghost">Sign in</Button>
+                </SignInButton>
+                <SignUpButton mode="redirect">
+                  <Button>Sign up</Button>
+                </SignUpButton>
+              </div>
+            </Show>
+            <Show when="signed-in">
+              <UserButton />
+            </Show>
+          </header>
+        )}
         {children}
         <TanStackDevtools
           config={{
