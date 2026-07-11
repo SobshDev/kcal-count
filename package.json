@@ -6,7 +6,8 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "vite dev --port 3000",
+    "dev": "bun run --parallel dev:web dev:convex",
+    "dev:web": "vite dev --port 3000",
     "dev:convex": "convex dev",
     "generate-routes": "tsr generate",
     "build": "vite build",

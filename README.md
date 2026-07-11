@@ -27,7 +27,7 @@ The project uses Bun for dependency management and scripts.
 4. In the Convex dashboard, add `CLERK_JWT_ISSUER_DOMAIN` with the same Clerk
    Frontend API URL. Restart `bunx convex dev` to sync `convex/auth.config.ts`.
 
-5. Start the web app in another terminal:
+5. Start the web app and Convex development sync together:
 
    ```bash
    bun run dev
@@ -38,8 +38,9 @@ Open <http://localhost:3000>.
 ## Commands
 
 ```bash
-bun run dev          # TanStack Start development server
-bun run dev:convex   # Convex development sync
+bun run dev          # TanStack Start and Convex development servers
+bun run dev:web      # TanStack Start development server only
+bun run dev:convex   # Convex development sync only
 bun run build        # Production build
 bun run lint         # ESLint
 bun run test         # Vitest
