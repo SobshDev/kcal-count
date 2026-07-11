@@ -145,3 +145,61 @@ body {
     @apply font-sans;
   }
 }
+
+/* Slow lava-lamp bubbles for the auth panel */
+@keyframes lava-drift {
+  0% {
+    transform: translate(-8%, 4%) scale(1);
+    border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
+  }
+  25% {
+    transform: translate(14%, -14%) scale(1.14);
+    border-radius: 58% 42% 40% 60% / 58% 51% 49% 42%;
+  }
+  50% {
+    transform: translate(6%, 20%) scale(0.94);
+    border-radius: 39% 61% 55% 45% / 62% 39% 61% 38%;
+  }
+  75% {
+    transform: translate(-16%, 6%) scale(1.08);
+    border-radius: 55% 45% 48% 52% / 45% 58% 42% 55%;
+  }
+  100% {
+    transform: translate(-8%, 4%) scale(1);
+    border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
+  }
+}
+
+@keyframes lava-drift-2 {
+  0% {
+    transform: translate(4%, 8%) scale(1);
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+  33% {
+    transform: translate(-18%, -10%) scale(0.9);
+    border-radius: 30% 70% 60% 40% / 50% 60% 40% 50%;
+  }
+  66% {
+    transform: translate(14%, 16%) scale(1.16);
+    border-radius: 50% 50% 42% 58% / 42% 58% 50% 50%;
+  }
+  100% {
+    transform: translate(4%, 8%) scale(1);
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+}
+
+.animate-lava {
+  animation: lava-drift 34s ease-in-out infinite;
+}
+
+.animate-lava-2 {
+  animation: lava-drift-2 46s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-lava,
+  .animate-lava-2 {
+    animation: none;
+  }
+}
