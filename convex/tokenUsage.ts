@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 
 import { internalMutation, query } from './_generated/server'
+import { DEFAULT_ACCOUNT_TOKEN_LIMIT } from './aiPolicy'
 import { addTokenUsage, validateTokenCount } from './tokenUsageModel'
 
 const emptyUsage = {
@@ -22,14 +23,36 @@ export const current = query({
         q.eq('ownerTokenIdentifier', identity.tokenIdentifier),
       )
       .unique()
+    const accountLimit = await ctx.db
+      .query('aiAccountLimits')
+      .withIndex('by_ownerTokenIdentifier', (q) =>
+        q.eq('ownerTokenIdentifier', identity.tokenIdentifier),
+      )
+      .unique()
+    const tokenLimit = accountLimit?.tokenLimit ?? DEFAULT_ACCOUNT_TOKEN_LIMIT
+    const reservedTokens = accountLimit?.reservedTokens ?? 0
 
-    if (!usage) return { ...emptyUsage, updatedAt: null }
+    if (!usage) {
+      return {
+        ...emptyUsage,
+        tokenLimit,
+        reservedTokens,
+        remainingTokens: Math.max(0, tokenLimit - reservedTokens),
+        updatedAt: null,
+      }
+    }
 
     return {
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
       totalTokens: usage.totalTokens,
       requestCount: usage.requestCount,
+      tokenLimit,
+      reservedTokens,
+      remainingTokens: Math.max(
+        0,
+        tokenLimit - usage.totalTokens - reservedTokens,
+      ),
       updatedAt: usage.updatedAt,
     }
   },

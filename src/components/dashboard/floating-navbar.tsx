@@ -10,11 +10,11 @@ import { Show, SignInButton, UserButton } from '@clerk/tanstack-react-start'
 
 import { Button } from '@/components/ui/button'
 
-type NavItem = { label: string; to?: '/' | '/settings' }
+type NavItem = { label: string; to?: '/' | '/statistics' | '/settings' }
 
 const NAV_ITEMS: Array<NavItem> = [
   { label: 'Dashboard', to: '/' },
-  { label: 'Statistics' },
+  { label: 'Statistics', to: '/statistics' },
   { label: 'Settings', to: '/settings' },
 ]
 

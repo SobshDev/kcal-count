@@ -8,10 +8,14 @@
  * @module
  */
 
+import type * as ai from "../ai.js";
+import type * as aiAccess from "../aiAccess.js";
+import type * as aiPolicy from "../aiPolicy.js";
 import type * as dailyObjectives from "../dailyObjectives.js";
 import type * as nutritionCalculator from "../nutritionCalculator.js";
 import type * as nutritionProfiles from "../nutritionProfiles.js";
 import type * as nutritionTargets from "../nutritionTargets.js";
+import type * as openRouterModel from "../openRouterModel.js";
 import type * as tokenUsage from "../tokenUsage.js";
 import type * as tokenUsageModel from "../tokenUsageModel.js";
 
@@ -22,10 +26,14 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  ai: typeof ai;
+  aiAccess: typeof aiAccess;
+  aiPolicy: typeof aiPolicy;
   dailyObjectives: typeof dailyObjectives;
   nutritionCalculator: typeof nutritionCalculator;
   nutritionProfiles: typeof nutritionProfiles;
   nutritionTargets: typeof nutritionTargets;
+  openRouterModel: typeof openRouterModel;
   tokenUsage: typeof tokenUsage;
   tokenUsageModel: typeof tokenUsageModel;
 }>;
