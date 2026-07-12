@@ -10,6 +10,7 @@
 
 import type * as dailyObjectives from "../dailyObjectives.js";
 import type * as nutritionCalculator from "../nutritionCalculator.js";
+import type * as nutritionProfiles from "../nutritionProfiles.js";
 import type * as nutritionTargets from "../nutritionTargets.js";
 
 import type {
@@ -21,6 +22,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   dailyObjectives: typeof dailyObjectives;
   nutritionCalculator: typeof nutritionCalculator;
+  nutritionProfiles: typeof nutritionProfiles;
   nutritionTargets: typeof nutritionTargets;
 }>;
 

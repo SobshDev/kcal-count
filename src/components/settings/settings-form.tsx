@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Activity,
   CalendarDays,
@@ -7,7 +7,9 @@ import {
   Target,
   User,
 } from 'lucide-react'
+import { useMutation, useQuery } from 'convex/react'
 
+import { api } from '../../../convex/_generated/api'
 import {
   Card,
   CardContent,
@@ -28,59 +30,53 @@ import { SegmentedControl } from '@/components/ui/segmented-control'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
+type Physiology = 'female' | 'male' | 'neutral_estimate'
+type DailyMovement =
+  'mostly_sitting' | 'some_movement' | 'active' | 'physically_demanding'
 type WeightGoal = 'lose' | 'maintain' | 'gain'
-type Intensity = 'low' | 'moderate' | 'high'
+type Intensity = 'light' | 'moderate' | 'vigorous'
 
 type SettingsState = {
   birthDate: string
-  height: string
-  heightUnit: string
-  weight: string
-  weightUnit: string
-  physiology: string
-  dailyMovement: string
+  heightCm: string
+  weightKg: string
+  physiology: Physiology | ''
+  dailyMovement: DailyMovement | ''
   exerciseFrequency: string
   exerciseDuration: string
   exerciseIntensity: Intensity
   weightGoal: WeightGoal
-  targetWeight: string
-  weeklyPace: string
 }
 
 const INITIAL_STATE: SettingsState = {
   birthDate: '',
-  height: '',
-  heightUnit: 'cm',
-  weight: '',
-  weightUnit: 'kg',
+  heightCm: '',
+  weightKg: '',
   physiology: '',
   dailyMovement: '',
-  exerciseFrequency: '',
-  exerciseDuration: '',
+  exerciseFrequency: '0',
+  exerciseDuration: '0',
   exerciseIntensity: 'moderate',
   weightGoal: 'maintain',
-  targetWeight: '',
-  weeklyPace: 'steady',
 }
 
 const PHYSIOLOGY_OPTIONS = [
-  { value: 'male', label: 'Male' },
   { value: 'female', label: 'Female' },
-  { value: 'pregnant', label: 'Pregnant' },
-  { value: 'breastfeeding', label: 'Breastfeeding' },
-]
+  { value: 'male', label: 'Male' },
+  { value: 'neutral_estimate', label: 'Neutral estimate' },
+] satisfies Array<{ value: Physiology; label: string }>
 
 const MOVEMENT_OPTIONS = [
-  { value: 'sedentary', label: 'Mostly sitting' },
-  { value: 'light', label: 'Lightly active' },
-  { value: 'moderate', label: 'Moderately active' },
-  { value: 'very', label: 'Very active' },
-]
+  { value: 'mostly_sitting', label: 'Mostly sitting' },
+  { value: 'some_movement', label: 'Some standing or walking' },
+  { value: 'active', label: 'Active most of the day' },
+  { value: 'physically_demanding', label: 'Physically demanding' },
+] satisfies Array<{ value: DailyMovement; label: string }>
 
 const INTENSITY_OPTIONS = [
-  { value: 'low', label: 'Low' },
+  { value: 'light', label: 'Light' },
   { value: 'moderate', label: 'Moderate' },
-  { value: 'high', label: 'High' },
+  { value: 'vigorous', label: 'Vigorous' },
 ]
 
 const GOAL_OPTIONS = [
@@ -89,13 +85,51 @@ const GOAL_OPTIONS = [
   { value: 'gain', label: 'Gain' },
 ]
 
-const PACE_OPTIONS = [
-  { value: 'relaxed', label: 'Relaxed · ~0.25 / week' },
-  { value: 'steady', label: 'Steady · ~0.5 / week' },
-  { value: 'ambitious', label: 'Ambitious · ~0.75 / week' },
+const METRIC_ORDER = [
+  'calories',
+  'protein',
+  'fiber',
+  'fruit_and_vegetables',
+  'added_sugar',
+  'saturated_fat',
+  'sodium',
+  'total_water',
 ]
 
-/** Number input with a static unit label pinned to the trailing edge. */
+const METRIC_LABELS: Record<string, string> = {
+  calories: 'Energy',
+  protein: 'Protein',
+  fiber: 'Fiber',
+  fruit_and_vegetables: 'Fruit & vegetables',
+  added_sugar: 'Added sugar',
+  saturated_fat: 'Saturated fat',
+  sodium: 'Sodium',
+  total_water: 'Total water',
+}
+
+function getLocalIsoDate() {
+  const date = new Date()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
+function formatGoal(
+  goal:
+    | { kind: 'minimum'; minimum: number }
+    | { kind: 'target'; target: number }
+    | { kind: 'maximum'; maximum: number }
+    | { kind: 'range'; minimum: number; maximum: number },
+  unit: string,
+) {
+  if (goal.kind === 'minimum') return `At least ${goal.minimum} ${unit}`
+  if (goal.kind === 'maximum') return `Up to ${goal.maximum} ${unit}`
+  if (goal.kind === 'range') {
+    return `${goal.minimum}–${goal.maximum} ${unit}`
+  }
+  return `${goal.target.toLocaleString()} ${unit}`
+}
+
 function SuffixInput({
   suffix,
   className,
@@ -111,7 +145,6 @@ function SuffixInput({
   )
 }
 
-/** Label + optional hint wrapper so every field lines up the same way. */
 function Field({
   label,
   htmlFor,
@@ -137,29 +170,130 @@ function Field({
 }
 
 export function SettingsForm() {
+  const savedSettings = useQuery(api.dailyObjectives.current)
+  const saveSettings = useMutation(api.dailyObjectives.save)
   const [form, setForm] = useState<SettingsState>(INITIAL_STATE)
+  const [hasHydrated, setHasHydrated] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [latestObjective, setLatestObjective] = useState<
+    Awaited<ReturnType<typeof saveSettings>> | undefined
+  >()
 
-  function update<Key extends keyof SettingsState>(
-    key: Key,
-    value: SettingsState[Key],
+  useEffect(() => {
+    if (savedSettings === undefined || hasHydrated) return
+
+    if (savedSettings) {
+      const { profile } = savedSettings
+      setForm({
+        birthDate: profile.birthDate,
+        heightCm: String(profile.heightCm),
+        weightKg: String(profile.weightKg),
+        physiology: profile.physiology,
+        dailyMovement: profile.dailyMovement,
+        exerciseFrequency: String(profile.exercise.sessionsPerWeek),
+        exerciseDuration: String(profile.exercise.minutesPerSession),
+        exerciseIntensity: profile.exercise.intensity,
+        weightGoal: profile.weightGoal,
+      })
+    }
+    setHasHydrated(true)
+  }, [hasHydrated, savedSettings])
+
+  function update<TKey extends keyof SettingsState>(
+    key: TKey,
+    value: SettingsState[TKey],
   ) {
     setForm((previous) => ({ ...previous, [key]: value }))
     setSaved(false)
+    setError(null)
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    // Persistence isn't wired up yet — this only exercises the UI/UX.
-    setSaved(true)
+    setSaved(false)
+    setError(null)
+
+    if (!form.physiology || !form.dailyMovement) {
+      setError('Choose a physiology profile and daily movement level.')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const objective = await saveSettings({
+        birthDate: form.birthDate,
+        calculationDate: getLocalIsoDate(),
+        heightCm: Number(form.heightCm),
+        weightKg: Number(form.weightKg),
+        physiology: form.physiology,
+        dailyMovement: form.dailyMovement,
+        exercise: {
+          sessionsPerWeek: Number(form.exerciseFrequency),
+          minutesPerSession: Number(form.exerciseDuration),
+          intensity: form.exerciseIntensity,
+        },
+        weightGoal: form.weightGoal,
+      })
+      setLatestObjective(objective)
+      setSaved(true)
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message.replace(/^.*Uncaught Error: /, '')
+          : 'We could not save your settings. Please try again.',
+      )
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   function handleReset() {
-    setForm(INITIAL_STATE)
+    if (!savedSettings) {
+      setForm(INITIAL_STATE)
+    } else {
+      const { profile } = savedSettings
+      setForm({
+        birthDate: profile.birthDate,
+        heightCm: String(profile.heightCm),
+        weightKg: String(profile.weightKg),
+        physiology: profile.physiology,
+        dailyMovement: profile.dailyMovement,
+        exerciseFrequency: String(profile.exercise.sessionsPerWeek),
+        exerciseDuration: String(profile.exercise.minutesPerSession),
+        exerciseIntensity: profile.exercise.intensity,
+        weightGoal: profile.weightGoal,
+      })
+    }
     setSaved(false)
+    setError(null)
   }
 
-  const showPace = form.weightGoal !== 'maintain'
+  if (!hasHydrated) {
+    return (
+      <div className="space-y-6" aria-label="Loading nutrition settings">
+        {[0, 1, 2].map((item) => (
+          <div
+            key={item}
+            className="h-44 animate-pulse rounded-2xl border bg-muted/40"
+          />
+        ))}
+      </div>
+    )
+  }
+
+  const storedTargets = savedSettings?.targets ?? []
+  const displayedTargets = latestObjective?.targets ?? storedTargets
+  const orderedTargets = [...displayedTargets].sort(
+    (left, right) =>
+      METRIC_ORDER.indexOf(left.metric) - METRIC_ORDER.indexOf(right.metric),
+  )
+  const maintenanceCalories =
+    latestObjective?.maintenanceCalories ??
+    savedSettings?.profile.maintenanceCalories
+  const activityLevel =
+    latestObjective?.activityLevel ?? savedSettings?.profile.activityLevel
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -170,19 +304,21 @@ export function SettingsForm() {
             About you
           </CardTitle>
           <CardDescription>
-            The basics we use to estimate your daily energy needs.
+            The basics used to estimate your daily energy needs.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 sm:grid-cols-2">
           <Field
             label="Birth date"
             htmlFor="birth-date"
-            hint="Used to work out your age."
+            hint="Daily objectives currently support adults aged 19 and over."
           >
             <div className="relative">
               <Input
                 id="birth-date"
                 type="date"
+                required
+                max={getLocalIsoDate()}
                 value={form.birthDate}
                 onChange={(event) => update('birthDate', event.target.value)}
                 className="pr-10"
@@ -197,11 +333,13 @@ export function SettingsForm() {
           <Field
             label="Nutrition physiology"
             htmlFor="physiology"
-            hint="Tailors nutrient reference values to your body."
+            hint="Used only to select the reference energy and water equations."
           >
             <Select
               value={form.physiology}
-              onValueChange={(value) => update('physiology', value)}
+              onValueChange={(value) =>
+                update('physiology', value as Physiology)
+              }
             >
               <SelectTrigger id="physiology">
                 <SelectValue placeholder="Select profile" />
@@ -217,63 +355,35 @@ export function SettingsForm() {
           </Field>
 
           <Field label="Height" htmlFor="height">
-            <div className="flex gap-2">
-              <Input
-                id="height"
-                type="number"
-                inputMode="decimal"
-                min={0}
-                placeholder="175"
-                value={form.height}
-                onChange={(event) => update('height', event.target.value)}
-                className="flex-1"
-              />
-              <Select
-                value={form.heightUnit}
-                onValueChange={(value) => update('heightUnit', value)}
-              >
-                <SelectTrigger
-                  aria-label="Height unit"
-                  className="w-20 shrink-0"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cm">cm</SelectItem>
-                  <SelectItem value="in">in</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <SuffixInput
+              id="height"
+              type="number"
+              inputMode="decimal"
+              min={100}
+              max={250}
+              step="0.1"
+              required
+              placeholder="175"
+              suffix="cm"
+              value={form.heightCm}
+              onChange={(event) => update('heightCm', event.target.value)}
+            />
           </Field>
 
           <Field label="Weight" htmlFor="weight">
-            <div className="flex gap-2">
-              <Input
-                id="weight"
-                type="number"
-                inputMode="decimal"
-                min={0}
-                placeholder="70"
-                value={form.weight}
-                onChange={(event) => update('weight', event.target.value)}
-                className="flex-1"
-              />
-              <Select
-                value={form.weightUnit}
-                onValueChange={(value) => update('weightUnit', value)}
-              >
-                <SelectTrigger
-                  aria-label="Weight unit"
-                  className="w-20 shrink-0"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="kg">kg</SelectItem>
-                  <SelectItem value="lb">lb</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <SuffixInput
+              id="weight"
+              type="number"
+              inputMode="decimal"
+              min={30}
+              max={350}
+              step="0.1"
+              required
+              placeholder="70"
+              suffix="kg"
+              value={form.weightKg}
+              onChange={(event) => update('weightKg', event.target.value)}
+            />
           </Field>
         </CardContent>
       </Card>
@@ -288,21 +398,23 @@ export function SettingsForm() {
             Activity
           </CardTitle>
           <CardDescription>
-            How much you move over a typical week.
+            Your typical movement across an ordinary week.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <Field
             label="Daily movement"
             htmlFor="daily-movement"
-            hint="Your baseline activity outside of workouts."
+            hint="Your baseline activity outside structured exercise."
           >
             <Select
               value={form.dailyMovement}
-              onValueChange={(value) => update('dailyMovement', value)}
+              onValueChange={(value) =>
+                update('dailyMovement', value as DailyMovement)
+              }
             >
               <SelectTrigger id="daily-movement">
-                <SelectValue placeholder="Select activity level" />
+                <SelectValue placeholder="Select movement level" />
               </SelectTrigger>
               <SelectContent>
                 {MOVEMENT_OPTIONS.map((option) => (
@@ -329,7 +441,9 @@ export function SettingsForm() {
                   type="number"
                   inputMode="numeric"
                   min={0}
-                  placeholder="3"
+                  max={14}
+                  step={1}
+                  required
                   suffix="/ week"
                   value={form.exerciseFrequency}
                   onChange={(event) =>
@@ -343,7 +457,9 @@ export function SettingsForm() {
                   type="number"
                   inputMode="numeric"
                   min={0}
-                  placeholder="45"
+                  max={360}
+                  step={1}
+                  required
                   suffix="min"
                   value={form.exerciseDuration}
                   onChange={(event) =>
@@ -376,11 +492,14 @@ export function SettingsForm() {
             Goal
           </CardTitle>
           <CardDescription>
-            Where you'd like your weight to head.
+            Choose the direction for your daily energy target.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-5">
-          <Field label="Weight goal">
+        <CardContent>
+          <Field
+            label="Weight goal"
+            hint="Loss and gain use a conservative 10% adjustment from maintenance."
+          >
             <SegmentedControl
               aria-label="Weight goal"
               options={GOAL_OPTIONS}
@@ -390,48 +509,55 @@ export function SettingsForm() {
               }
             />
           </Field>
-
-          {showPace ? (
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Target weight" htmlFor="target-weight">
-                <SuffixInput
-                  id="target-weight"
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  placeholder="65"
-                  suffix={form.weightUnit}
-                  value={form.targetWeight}
-                  onChange={(event) =>
-                    update('targetWeight', event.target.value)
-                  }
-                />
-              </Field>
-              <Field
-                label="Weekly pace"
-                htmlFor="weekly-pace"
-                hint={`How fast to ${form.weightGoal} weight.`}
-              >
-                <Select
-                  value={form.weeklyPace}
-                  onValueChange={(value) => update('weeklyPace', value)}
-                >
-                  <SelectTrigger id="weekly-pace">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PACE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-          ) : null}
         </CardContent>
       </Card>
+
+      {orderedTargets.length > 0 ? (
+        <section
+          aria-labelledby="daily-objective-title"
+          className="overflow-hidden rounded-2xl border bg-card"
+        >
+          <div className="flex flex-col gap-2 border-b px-6 py-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2
+                id="daily-objective-title"
+                className="text-base font-semibold tracking-[-0.01em]"
+              >
+                Daily objective
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Based on a {activityLevel?.replace('_', ' ')} routine and{' '}
+                {maintenanceCalories?.toLocaleString()} kcal maintenance.
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">Calculated daily</p>
+          </div>
+          <dl className="divide-y">
+            {orderedTargets.map((target) => (
+              <div
+                key={target.metric}
+                className="flex items-baseline justify-between gap-6 px-6 py-3.5"
+              >
+                <dt className="text-sm text-muted-foreground">
+                  {METRIC_LABELS[target.metric]}
+                </dt>
+                <dd className="text-right text-sm font-semibold tabular-nums">
+                  {formatGoal(target.goal, target.unit)}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ) : null}
+
+      {error ? (
+        <p
+          role="alert"
+          className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          {error}
+        </p>
+      ) : null}
 
       <div className="flex flex-col-reverse items-center gap-3 sm:flex-row sm:justify-end">
         {saved ? (
@@ -442,7 +568,7 @@ export function SettingsForm() {
             <span className="flex size-5 items-center justify-center rounded-full bg-foreground text-background">
               <Check className="size-3" aria-hidden="true" />
             </span>
-            Looks good — saving isn't wired up yet.
+            Settings and daily objectives saved.
           </p>
         ) : null}
         <Button
@@ -450,11 +576,16 @@ export function SettingsForm() {
           variant="outline"
           className="h-10 w-full sm:w-auto"
           onClick={handleReset}
+          disabled={isSaving}
         >
-          Reset
+          Discard changes
         </Button>
-        <Button type="submit" className="h-10 w-full sm:w-auto">
-          Save changes
+        <Button
+          type="submit"
+          className="h-10 w-full sm:w-auto"
+          disabled={isSaving}
+        >
+          {isSaving ? 'Saving…' : 'Save and calculate'}
         </Button>
       </div>
     </form>
