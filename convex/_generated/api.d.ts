@@ -8,13 +8,23 @@
  * @module
  */
 
+import type * as dailyObjectives from "../dailyObjectives.js";
+import type * as nutritionCalculator from "../nutritionCalculator.js";
+import type * as nutritionProfiles from "../nutritionProfiles.js";
+import type * as nutritionTargets from "../nutritionTargets.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  dailyObjectives: typeof dailyObjectives;
+  nutritionCalculator: typeof nutritionCalculator;
+  nutritionProfiles: typeof nutritionProfiles;
+  nutritionTargets: typeof nutritionTargets;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.

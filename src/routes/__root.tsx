@@ -85,6 +85,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const hideHeader = useRouterState({
     select: ({ location }) =>
       location.pathname === '/' ||
+      location.pathname.startsWith('/settings') ||
       location.pathname.startsWith('/sign-in') ||
       location.pathname.startsWith('/sign-up'),
   })
