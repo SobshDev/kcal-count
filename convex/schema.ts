@@ -81,7 +81,8 @@ export default defineSchema({
     .index('by_ownerTokenIdentifier_and_consumedAt', [
       'ownerTokenIdentifier',
       'consumedAt',
-    ]),
+    ])
+    .index('by_statisticsVersion', ['statisticsVersion']),
   mealPhotos: defineTable(mealPhotoValidator)
     .index('by_ownerTokenIdentifier', ['ownerTokenIdentifier'])
     .index('by_storageId', ['storageId']),

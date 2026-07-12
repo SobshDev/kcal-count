@@ -118,21 +118,17 @@ export const save = mutation({
       const protein = objective.targets.find(
         (target) => target.metric === 'protein',
       )
-      const fiber = objective.targets.find((target) => target.metric === 'fiber')
+      const fiber = objective.targets.find(
+        (target) => target.metric === 'fiber',
+      )
       await ctx.db.patch(currentDay._id, {
         goalSnapshot: {
           calorieTarget:
-            calorie?.goal.kind === 'target'
-              ? calorie.goal.target
-              : undefined,
+            calorie?.goal.kind === 'target' ? calorie.goal.target : undefined,
           proteinMinimum:
-            protein?.goal.kind === 'range'
-              ? protein.goal.minimum
-              : undefined,
+            protein?.goal.kind === 'range' ? protein.goal.minimum : undefined,
           proteinMaximum:
-            protein?.goal.kind === 'range'
-              ? protein.goal.maximum
-              : undefined,
+            protein?.goal.kind === 'range' ? protein.goal.maximum : undefined,
           fiberMinimum:
             fiber?.goal.kind === 'minimum' ? fiber.goal.minimum : undefined,
         },

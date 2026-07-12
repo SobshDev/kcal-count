@@ -1,12 +1,8 @@
 import type { Doc } from './_generated/dataModel'
 import type { MutationCtx } from './_generated/server'
+import { daysBetween, normalizeFoodName, shiftDateKey } from './statisticsModel'
 
 type DatabaseWriterCtx = Pick<MutationCtx, 'db'>
-import {
-  daysBetween,
-  normalizeFoodName,
-  shiftDateKey,
-} from './statisticsModel'
 
 type MealForAggregation = Pick<
   Doc<'mealEntries'>,
@@ -30,6 +26,7 @@ export async function aggregateMeal(
   ownerTokenIdentifier: string,
   meal: MealForAggregation,
   now = Date.now(),
+  captureGoalSnapshot = true,
 ) {
   const existing = await ctx.db
     .query('dailyNutritionTotals')
@@ -58,14 +55,12 @@ export async function aggregateMeal(
         existing.completeNutritionMealCount + (isComplete ? 1 : 0),
       calories: existing.calories + meal.calories,
       proteinGrams: existing.proteinGrams + meal.proteinGrams,
-      carbohydrateGrams:
-        existing.carbohydrateGrams + meal.carbohydrateGrams,
+      carbohydrateGrams: existing.carbohydrateGrams + meal.carbohydrateGrams,
       fatGrams: existing.fatGrams + meal.fatGrams,
       fiberGrams: existing.fiberGrams + (meal.fiberGrams ?? 0),
       fruitVegetableGrams:
         existing.fruitVegetableGrams + (meal.fruitVegetableGrams ?? 0),
-      addedSugarGrams:
-        existing.addedSugarGrams + (meal.addedSugarGrams ?? 0),
+      addedSugarGrams: existing.addedSugarGrams + (meal.addedSugarGrams ?? 0),
       saturatedFatGrams:
         existing.saturatedFatGrams + (meal.saturatedFatGrams ?? 0),
       sodiumMg: existing.sodiumMg + (meal.sodiumMg ?? 0),
@@ -74,7 +69,9 @@ export async function aggregateMeal(
       updatedAt: now,
     })
   } else {
-    const goalSnapshot = await getGoalSnapshot(ctx, ownerTokenIdentifier)
+    const goalSnapshot = captureGoalSnapshot
+      ? await getGoalSnapshot(ctx, ownerTokenIdentifier)
+      : {}
     await ctx.db.insert('dailyNutritionTotals', {
       ownerTokenIdentifier,
       dateKey: meal.dateKey,
@@ -115,13 +112,11 @@ async function aggregateFood(
   const normalizedName = normalizeFoodName(meal.name)
   const existing = await ctx.db
     .query('dailyFoodTotals')
-    .withIndex(
-      'by_ownerTokenIdentifier_and_dateKey_and_normalizedName',
-      (q) =>
-        q
-          .eq('ownerTokenIdentifier', ownerTokenIdentifier)
-          .eq('dateKey', meal.dateKey)
-          .eq('normalizedName', normalizedName),
+    .withIndex('by_ownerTokenIdentifier_and_dateKey_and_normalizedName', (q) =>
+      q
+        .eq('ownerTokenIdentifier', ownerTokenIdentifier)
+        .eq('dateKey', meal.dateKey)
+        .eq('normalizedName', normalizedName),
     )
     .unique()
   if (existing) {
@@ -234,9 +229,7 @@ export async function upsertWeightMeasurement(
   const existing = await ctx.db
     .query('weightMeasurements')
     .withIndex('by_ownerTokenIdentifier_and_dateKey', (q) =>
-      q
-        .eq('ownerTokenIdentifier', ownerTokenIdentifier)
-        .eq('dateKey', dateKey),
+      q.eq('ownerTokenIdentifier', ownerTokenIdentifier).eq('dateKey', dateKey),
     )
     .unique()
   const value = {

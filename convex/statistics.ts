@@ -28,80 +28,87 @@ export const dashboard = query({
     const start30 = shiftDateKey(args.todayDateKey, -29)
     const start7 = shiftDateKey(args.todayDateKey, -6)
 
-    const [dailyRows, foodRows, weights, targets, account, todayStreak, yesterdayStreak] =
-      await Promise.all([
-        ctx.db
-          .query('dailyNutritionTotals')
-          .withIndex('by_ownerTokenIdentifier_and_dateKey', (q) =>
-            q
-              .eq('ownerTokenIdentifier', owner)
-              .gte('dateKey', start56)
-              .lte('dateKey', args.todayDateKey),
-          )
-          .take(56),
-        ctx.db
-          .query('dailyFoodTotals')
-          .withIndex('by_ownerTokenIdentifier_and_dateKey', (q) =>
-            q
-              .eq('ownerTokenIdentifier', owner)
-              .gte('dateKey', start30)
-              .lte('dateKey', args.todayDateKey),
-          )
-          .take(1_500),
-        ctx.db
-          .query('weightMeasurements')
-          .withIndex('by_ownerTokenIdentifier_and_dateKey', (q) =>
-            q
-              .eq('ownerTokenIdentifier', owner)
-              .gte('dateKey', start56)
-              .lte('dateKey', args.todayDateKey),
-          )
-          .take(56),
-        ctx.db
-          .query('nutritionTargets')
-          .withIndex('by_ownerTokenIdentifier_and_metric', (q) =>
-            q.eq('ownerTokenIdentifier', owner),
-          )
-          .take(8),
-        ctx.db
-          .query('accountStatistics')
-          .withIndex('by_ownerTokenIdentifier', (q) =>
-            q.eq('ownerTokenIdentifier', owner),
-          )
-          .unique(),
-        ctx.db
-          .query('loggingStreaks')
-          .withIndex('by_ownerTokenIdentifier_and_endDateKey', (q) =>
-            q
-              .eq('ownerTokenIdentifier', owner)
-              .eq('endDateKey', args.todayDateKey),
-          )
-          .unique(),
-        ctx.db
-          .query('loggingStreaks')
-          .withIndex('by_ownerTokenIdentifier_and_endDateKey', (q) =>
-            q
-              .eq('ownerTokenIdentifier', owner)
-              .eq('endDateKey', shiftDateKey(args.todayDateKey, -1)),
-          )
-          .unique(),
-      ])
+    const [
+      dailyRows,
+      foodRows,
+      weights,
+      targets,
+      account,
+      todayStreak,
+      yesterdayStreak,
+    ] = await Promise.all([
+      ctx.db
+        .query('dailyNutritionTotals')
+        .withIndex('by_ownerTokenIdentifier_and_dateKey', (q) =>
+          q
+            .eq('ownerTokenIdentifier', owner)
+            .gte('dateKey', start56)
+            .lte('dateKey', args.todayDateKey),
+        )
+        .take(56),
+      ctx.db
+        .query('dailyFoodTotals')
+        .withIndex('by_ownerTokenIdentifier_and_dateKey', (q) =>
+          q
+            .eq('ownerTokenIdentifier', owner)
+            .gte('dateKey', start30)
+            .lte('dateKey', args.todayDateKey),
+        )
+        .take(1_500),
+      ctx.db
+        .query('weightMeasurements')
+        .withIndex('by_ownerTokenIdentifier_and_dateKey', (q) =>
+          q
+            .eq('ownerTokenIdentifier', owner)
+            .gte('dateKey', start56)
+            .lte('dateKey', args.todayDateKey),
+        )
+        .take(56),
+      ctx.db
+        .query('nutritionTargets')
+        .withIndex('by_ownerTokenIdentifier_and_metric', (q) =>
+          q.eq('ownerTokenIdentifier', owner),
+        )
+        .take(8),
+      ctx.db
+        .query('accountStatistics')
+        .withIndex('by_ownerTokenIdentifier', (q) =>
+          q.eq('ownerTokenIdentifier', owner),
+        )
+        .unique(),
+      ctx.db
+        .query('loggingStreaks')
+        .withIndex('by_ownerTokenIdentifier_and_endDateKey', (q) =>
+          q
+            .eq('ownerTokenIdentifier', owner)
+            .eq('endDateKey', args.todayDateKey),
+        )
+        .unique(),
+      ctx.db
+        .query('loggingStreaks')
+        .withIndex('by_ownerTokenIdentifier_and_endDateKey', (q) =>
+          q
+            .eq('ownerTokenIdentifier', owner)
+            .eq('endDateKey', shiftDateKey(args.todayDateKey, -1)),
+        )
+        .unique(),
+    ])
 
     const byDate = new Map(dailyRows.map((row) => [row.dateKey, row]))
     const sevenDays = Array.from({ length: 7 }, (_, index) => {
       const dateKey = shiftDateKey(start7, index)
       return toDay(dateKey, byDate.get(dateKey))
     })
-    const today = toDay(
-      args.todayDateKey,
-      byDate.get(args.todayDateKey),
-    )
+    const today = toDay(args.todayDateKey, byDate.get(args.todayDateKey))
     const weeklyAverages = METRICS.map(([metric, unit]) => {
       const usableDays = sevenDays.filter(
-        (day) => day.logged && (metric === 'calories' || metric === 'proteinGrams' || day.complete),
+        (day) =>
+          day.logged &&
+          (metric === 'calories' || metric === 'proteinGrams' || day.complete),
       )
       const values = sevenDays.map((day) =>
-        day.logged && (metric === 'calories' || metric === 'proteinGrams' || day.complete)
+        day.logged &&
+        (metric === 'calories' || metric === 'proteinGrams' || day.complete)
           ? day[metric]
           : null,
       )
@@ -142,7 +149,10 @@ export const dashboard = query({
       }
     }
     const topFoods = [...foodMap.values()]
-      .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name))
+      .sort(
+        (left, right) =>
+          right.count - left.count || left.name.localeCompare(right.name),
+      )
       .slice(0, 5)
 
     const categoryKeys = [
@@ -155,7 +165,9 @@ export const dashboard = query({
     const categoryCalories = categoryKeys.map(([category, key]) => ({
       category,
       today: today[key],
-      average: average(sevenDays.filter((day) => day.logged).map((day) => day[key])),
+      average: average(
+        sevenDays.filter((day) => day.logged).map((day) => day[key]),
+      ),
     }))
 
     const weightByDate = new Map(weights.map((row) => [row.dateKey, row]))

@@ -7,11 +7,7 @@ export const mealCategoryValidator = v.union(
   v.literal('snack'),
 )
 
-export type MealCategory =
-  | 'breakfast'
-  | 'lunch'
-  | 'dinner'
-  | 'snack'
+export type MealCategory = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 
 export const goalSnapshotValidator = v.object({
   calorieTarget: v.optional(v.number()),

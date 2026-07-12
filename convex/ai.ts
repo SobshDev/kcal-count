@@ -118,7 +118,10 @@ export const analyzeMeal = action({
             photoId: args.photoId,
           })
         : null
-    const localHour = String(Math.floor(args.localMinutes / 60)).padStart(2, '0')
+    const localHour = String(Math.floor(args.localMinutes / 60)).padStart(
+      2,
+      '0',
+    )
     const localMinute = String(args.localMinutes % 60).padStart(2, '0')
     const mealPrompt = description
       ? `Meal description: ${description}`

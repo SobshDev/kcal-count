@@ -20,6 +20,14 @@ export const day = query({
           .eq('dateKey', args.dateKey),
       )
       .unique()
+    const nutritionSummary = await ctx.db
+      .query('dailyNutritionTotals')
+      .withIndex('by_ownerTokenIdentifier_and_dateKey', (q) =>
+        q
+          .eq('ownerTokenIdentifier', identity.tokenIdentifier)
+          .eq('dateKey', args.dateKey),
+      )
+      .unique()
     const meals = await ctx.db
       .query('mealEntries')
       .withIndex('by_ownerTokenIdentifier_and_dateKey', (q) =>
@@ -39,8 +47,8 @@ export const day = query({
     )
 
     return {
-      totalCalories: summary?.totalCalories ?? 0,
-      mealCount: summary?.mealCount ?? 0,
+      totalCalories: nutritionSummary?.calories ?? summary?.totalCalories ?? 0,
+      mealCount: nutritionSummary?.mealCount ?? summary?.mealCount ?? 0,
       meals: mealsWithPhotos,
     }
   },
