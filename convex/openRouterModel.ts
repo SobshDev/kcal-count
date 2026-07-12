@@ -15,6 +15,68 @@ export type OpenRouterCompletion = {
   totalTokens: number
 }
 
+export type OpenRouterStreamState = {
+  content: string
+  model?: string
+  inputTokens?: number
+  outputTokens?: number
+  totalTokens?: number
+}
+
+export function applyOpenRouterStreamChunk(
+  state: OpenRouterStreamState,
+  payload: unknown,
+): OpenRouterStreamState {
+  if (typeof payload !== 'object' || payload === null) return state
+  const chunk = payload as {
+    model?: unknown
+    choices?: unknown
+    usage?: unknown
+    error?: unknown
+  }
+  if (chunk.error) throw new Error(getOpenRouterErrorMessage(chunk.error))
+  const choices = Array.isArray(chunk.choices) ? chunk.choices : []
+  const first = choices[0] as
+    { delta?: { content?: unknown }; error?: unknown } | undefined
+  if (first?.error) throw new Error(getOpenRouterErrorMessage(first.error))
+  const delta =
+    typeof first?.delta?.content === 'string' ? first.delta.content : ''
+  const next: OpenRouterStreamState = {
+    ...state,
+    content: state.content + delta,
+    model: typeof chunk.model === 'string' ? chunk.model : state.model,
+  }
+  if (typeof chunk.usage === 'object' && chunk.usage !== null) {
+    const usage = chunk.usage as Record<string, unknown>
+    next.inputTokens = requireTokenCount(usage.prompt_tokens, 'prompt_tokens')
+    next.outputTokens = requireTokenCount(
+      usage.completion_tokens,
+      'completion_tokens',
+    )
+    next.totalTokens = requireTokenCount(usage.total_tokens, 'total_tokens')
+    if (next.totalTokens !== next.inputTokens + next.outputTokens) {
+      throw new Error('OpenRouter returned inconsistent token usage')
+    }
+  }
+  return next
+}
+
+export function parseSseData(buffer: string) {
+  const events: string[] = []
+  const normalized = buffer.replaceAll('\r\n', '\n')
+  const parts = normalized.split('\n\n')
+  const remainder = parts.pop() ?? ''
+  for (const part of parts) {
+    const data = part
+      .split('\n')
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice(5).trimStart())
+      .join('\n')
+    if (data) events.push(data)
+  }
+  return { events, remainder }
+}
+
 export function parseOpenRouterCompletion(
   payload: OpenRouterPayload,
 ): OpenRouterCompletion {

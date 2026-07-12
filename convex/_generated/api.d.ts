@@ -11,6 +11,9 @@
 import type * as ai from "../ai.js";
 import type * as aiAccess from "../aiAccess.js";
 import type * as aiPolicy from "../aiPolicy.js";
+import type * as chatContext from "../chatContext.js";
+import type * as chatModel from "../chatModel.js";
+import type * as chats from "../chats.js";
 import type * as dailyObjectives from "../dailyObjectives.js";
 import type * as mealAnalysis from "../mealAnalysis.js";
 import type * as mealEntries from "../mealEntries.js";
@@ -37,6 +40,9 @@ declare const fullApi: ApiFromModules<{
   ai: typeof ai;
   aiAccess: typeof aiAccess;
   aiPolicy: typeof aiPolicy;
+  chatContext: typeof chatContext;
+  chatModel: typeof chatModel;
+  chats: typeof chats;
   dailyObjectives: typeof dailyObjectives;
   mealAnalysis: typeof mealAnalysis;
   mealEntries: typeof mealEntries;
