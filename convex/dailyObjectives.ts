@@ -3,6 +3,7 @@ import {
   calculateDailyObjective,
   dailyObjectiveInputValidator,
 } from './nutritionCalculator'
+import { upsertWeightMeasurement } from './statisticsAggregation'
 
 export const preview = query({
   args: dailyObjectiveInputValidator.fields,
@@ -94,6 +95,44 @@ export const save = mutation({
       } else {
         await ctx.db.insert('nutritionTargets', savedTarget)
       }
+    }
+
+    await upsertWeightMeasurement(
+      ctx,
+      ownerTokenIdentifier,
+      args.calculationDate,
+      args.weightKg,
+    )
+    const currentDay = await ctx.db
+      .query('dailyNutritionTotals')
+      .withIndex('by_ownerTokenIdentifier_and_dateKey', (q) =>
+        q
+          .eq('ownerTokenIdentifier', ownerTokenIdentifier)
+          .eq('dateKey', args.calculationDate),
+      )
+      .unique()
+    if (currentDay) {
+      const calorie = objective.targets.find(
+        (target) => target.metric === 'calories',
+      )
+      const protein = objective.targets.find(
+        (target) => target.metric === 'protein',
+      )
+      const fiber = objective.targets.find(
+        (target) => target.metric === 'fiber',
+      )
+      await ctx.db.patch(currentDay._id, {
+        goalSnapshot: {
+          calorieTarget:
+            calorie?.goal.kind === 'target' ? calorie.goal.target : undefined,
+          proteinMinimum:
+            protein?.goal.kind === 'range' ? protein.goal.minimum : undefined,
+          proteinMaximum:
+            protein?.goal.kind === 'range' ? protein.goal.maximum : undefined,
+          fiberMinimum:
+            fiber?.goal.kind === 'minimum' ? fiber.goal.minimum : undefined,
+        },
+      })
     }
 
     return objective

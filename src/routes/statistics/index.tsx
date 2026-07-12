@@ -1,18 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useUser } from '@clerk/tanstack-react-start'
 
 import { FloatingNavbar } from '@/components/dashboard/floating-navbar'
-import { AddFoodCard } from '@/components/dashboard/add-food-card'
+import { StatisticsDashboard } from '@/components/statistics/statistics-dashboard'
 
-export const Route = createFileRoute('/')({ component: Home })
+export const Route = createFileRoute('/statistics/')({
+  component: StatisticsPage,
+})
 
-export function Home() {
-  const { user } = useUser()
-  const name = user?.firstName ?? user?.username
-
+function StatisticsPage() {
   return (
     <main className="dark relative min-h-svh overflow-hidden bg-[oklch(0.19_0_0)] text-white">
-      {/* Lava-lamp blobs — same treatment as the sign-up page. */}
+      {/* Lava-lamp blobs — same treatment as the dashboard and sign-up page. */}
       <div
         className="pointer-events-none absolute inset-0 overflow-hidden"
         aria-hidden="true"
@@ -47,17 +45,21 @@ export function Home() {
         }}
       />
       <FloatingNavbar />
-      <section className="relative z-10 mx-auto w-full max-w-2xl px-6 pt-32 pb-20">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-            {name ? `Welcome, ${name}` : 'Welcome back'}
+      <div className="relative z-10 mx-auto w-full max-w-5xl px-6 pt-32 pb-20">
+        <div className="mb-9">
+          <p className="mb-3 text-xs font-semibold tracking-[0.14em] text-white/50 uppercase">
+            Insights
+          </p>
+          <h1 className="text-3xl font-semibold tracking-[-0.035em] text-balance">
+            Statistics
           </h1>
-          <p className="mt-2 text-sm leading-6 text-white/60">
-            Log a meal to keep today on track.
+          <p className="mt-3 max-w-md text-sm leading-6 text-white/60">
+            Your day at a glance, weekly trends, logging habits, and how intake
+            lines up with your weight.
           </p>
         </div>
-        <AddFoodCard />
-      </section>
+        <StatisticsDashboard />
+      </div>
     </main>
   )
 }

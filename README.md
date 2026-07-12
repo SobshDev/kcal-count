@@ -27,7 +27,11 @@ The project uses Bun for dependency management and scripts.
 4. In the Convex dashboard, add `CLERK_JWT_ISSUER_DOMAIN` with the same Clerk
    Frontend API URL. Restart `bunx convex dev` to sync `convex/auth.config.ts`.
 
-5. Start the web app and Convex development sync together:
+5. To enable AI, add `OPENROUTER_API_KEY` in the Convex dashboard. Optional
+   values are `OPENROUTER_MODEL` (defaults to `openai/gpt-5.6-luna`),
+   `OPENROUTER_APP_URL`, and `OPENROUTER_APP_TITLE`.
+
+6. Start the web app and Convex development sync together:
 
    ```bash
    bun run dev

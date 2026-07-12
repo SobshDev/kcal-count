@@ -10,11 +10,14 @@ import { Show, SignInButton, UserButton } from '@clerk/tanstack-react-start'
 
 import { Button } from '@/components/ui/button'
 
-type NavItem = { label: string; to?: '/' | '/settings' }
+type NavItem = {
+  label: string
+  to?: '/dashboard' | '/statistics' | '/settings'
+}
 
 const NAV_ITEMS: Array<NavItem> = [
-  { label: 'Dashboard', to: '/' },
-  { label: 'Statistics' },
+  { label: 'Dashboard', to: '/dashboard' },
+  { label: 'Statistics', to: '/statistics' },
   { label: 'Settings', to: '/settings' },
 ]
 
@@ -59,7 +62,7 @@ export function FloatingNavbar() {
               >
                 <Link
                   to={item.to}
-                  activeOptions={{ exact: item.to === '/' }}
+                  activeOptions={{ exact: true }}
                   activeProps={{ className: 'bg-white/10 text-white' }}
                 >
                   {item.label}
