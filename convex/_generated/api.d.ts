@@ -12,6 +12,8 @@ import type * as dailyObjectives from "../dailyObjectives.js";
 import type * as nutritionCalculator from "../nutritionCalculator.js";
 import type * as nutritionProfiles from "../nutritionProfiles.js";
 import type * as nutritionTargets from "../nutritionTargets.js";
+import type * as tokenUsage from "../tokenUsage.js";
+import type * as tokenUsageModel from "../tokenUsageModel.js";
 
 import type {
   ApiFromModules,
@@ -24,6 +26,8 @@ declare const fullApi: ApiFromModules<{
   nutritionCalculator: typeof nutritionCalculator;
   nutritionProfiles: typeof nutritionProfiles;
   nutritionTargets: typeof nutritionTargets;
+  tokenUsage: typeof tokenUsage;
+  tokenUsageModel: typeof tokenUsageModel;
 }>;
 
 /**
