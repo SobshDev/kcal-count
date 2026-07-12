@@ -6,7 +6,7 @@ import { AddFoodCard } from '@/components/dashboard/add-food-card'
 
 export const Route = createFileRoute('/')({ component: Home })
 
-function Home() {
+export function Home() {
   const { user } = useUser()
   const name = user?.firstName ?? user?.username
 

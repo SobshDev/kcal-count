@@ -25,6 +25,7 @@ import type { DataModel } from "./dataModel.js";
  * Typesafe environment variables declared in `convex.config.ts`.
  */
 type Env = {
+  readonly CLERK_JWT_ISSUER_DOMAIN: string | undefined;
   readonly OPENROUTER_API_KEY: string | undefined;
   readonly OPENROUTER_APP_TITLE: string | undefined;
   readonly OPENROUTER_APP_URL: string | undefined;
