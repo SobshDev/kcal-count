@@ -66,7 +66,7 @@ export type CalculatedNutritionTarget = {
 }
 
 export type DailyObjective = {
-  calculationVersion: '1.0.0'
+  calculationVersion: '1.1.0'
   ageYears: number
   activityLevel: ActivityLevel
   maintenanceCalories: number
@@ -169,6 +169,21 @@ export function classifyActivityLevel(
   if (totalEquivalentMinutes >= 75) return 'active'
   if (totalEquivalentMinutes >= 30) return 'low_active'
   return 'inactive'
+}
+
+function calculateEquivalentActivityMinutes(
+  dailyMovement: DailyMovement,
+  exercise: DailyObjectiveInput['exercise'],
+) {
+  // Reuse classification for its input validation.
+  classifyActivityLevel(dailyMovement, exercise)
+  return (
+    movementEquivalentMinutes[dailyMovement] +
+    (exercise.sessionsPerWeek *
+      exercise.minutesPerSession *
+      intensityMultiplier[exercise.intensity]) /
+      7
+  )
 }
 
 type EerCoefficients = {
@@ -278,6 +293,62 @@ export function calculateMaintenanceCalories(
   return roundTo(calories, 10)
 }
 
+/**
+ * Interpolates between the adult EER activity equations so all of the movement
+ * information supplied by the user affects the estimate. This avoids a large
+ * calorie jump when someone crosses an activity-category boundary.
+ */
+export function calculatePersonalizedMaintenanceCalories(
+  ageYears: number,
+  heightCm: number,
+  weightKg: number,
+  physiology: NutritionPhysiology,
+  equivalentActivityMinutes: number,
+) {
+  if (!Number.isFinite(equivalentActivityMinutes)) {
+    throw new Error('equivalentActivityMinutes must be finite')
+  }
+
+  const anchors: Array<{ minutes: number; level: ActivityLevel }> = [
+    { minutes: 0, level: 'inactive' },
+    { minutes: 30, level: 'low_active' },
+    { minutes: 75, level: 'active' },
+    { minutes: 150, level: 'very_active' },
+  ]
+  const minutes = Math.max(0, Math.min(150, equivalentActivityMinutes))
+  const upperIndex = anchors.findIndex((anchor) => minutes <= anchor.minutes)
+
+  if (upperIndex <= 0) {
+    return calculateMaintenanceCalories(
+      ageYears,
+      heightCm,
+      weightKg,
+      physiology,
+      anchors[0].level,
+    )
+  }
+
+  const lower = anchors[upperIndex - 1]
+  const upper = anchors[upperIndex]
+  const lowerCalories = calculateMaintenanceCalories(
+    ageYears,
+    heightCm,
+    weightKg,
+    physiology,
+    lower.level,
+  )
+  const upperCalories = calculateMaintenanceCalories(
+    ageYears,
+    heightCm,
+    weightKg,
+    physiology,
+    upper.level,
+  )
+  const progress = (minutes - lower.minutes) / (upper.minutes - lower.minutes)
+
+  return roundTo(lowerCalories + (upperCalories - lowerCalories) * progress, 10)
+}
+
 function createTarget(
   target: Omit<CalculatedNutritionTarget, 'calculationInputs'>,
   calculationInputs: CalculatedNutritionTarget['calculationInputs'],
@@ -293,12 +364,16 @@ export function calculateDailyObjective(
     input.dailyMovement,
     input.exercise,
   )
-  const maintenanceCalories = calculateMaintenanceCalories(
+  const equivalentActivityMinutes = calculateEquivalentActivityMinutes(
+    input.dailyMovement,
+    input.exercise,
+  )
+  const maintenanceCalories = calculatePersonalizedMaintenanceCalories(
     ageYears,
     input.heightCm,
     input.weightKg,
     input.physiology,
-    activityLevel,
+    equivalentActivityMinutes,
   )
   const multiplier = goalMultiplier[input.weightGoal]
   const calorieTarget = roundTo(maintenanceCalories * multiplier, 10)
@@ -313,6 +388,7 @@ export function calculateDailyObjective(
     exerciseSessionsPerWeek: input.exercise.sessionsPerWeek,
     exerciseMinutesPerSession: input.exercise.minutesPerSession,
     exerciseIntensity: input.exercise.intensity,
+    equivalentActivityMinutes: Math.round(equivalentActivityMinutes),
     activityLevel,
     weightGoal: input.weightGoal,
     maintenanceCalories,
@@ -325,8 +401,15 @@ export function calculateDailyObjective(
         ? 2700
         : 3200
 
+  const proteinGramsPerKg =
+    input.weightGoal === 'maintain' && activityLevel === 'inactive'
+      ? { minimum: 0.8, maximum: 1.2 }
+      : input.weightGoal === 'maintain'
+        ? { minimum: 1, maximum: 1.4 }
+        : { minimum: 1.2, maximum: 1.6 }
+
   return {
-    calculationVersion: '1.0.0',
+    calculationVersion: '1.1.0',
     ageYears,
     activityLevel,
     maintenanceCalories,
@@ -348,8 +431,8 @@ export function calculateDailyObjective(
           metric: 'protein',
           goal: {
             kind: 'range',
-            minimum: Math.round(input.weightKg * 1.2),
-            maximum: Math.round(input.weightKg * 1.6),
+            minimum: Math.round(input.weightKg * proteinGramsPerKg.minimum),
+            maximum: Math.round(input.weightKg * proteinGramsPerKg.maximum),
           },
           unit: 'g',
           standard: 'us_dga_2025_2030',
