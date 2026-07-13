@@ -82,6 +82,66 @@ describe('statistics', () => {
     })
   })
 
+  it('splits the logging streak when a middle day’s only meal is deleted', async () => {
+    const token = 'https://clerk.test|streak-delete-account'
+    const t = convexTest(schema, modules).withIdentity({
+      tokenIdentifier: token,
+    })
+    for (const dateKey of ['2026-07-09', '2026-07-10', '2026-07-11']) {
+      await t.mutation(internal.mealEntries.saveAnalyzed, { ...meal, dateKey })
+    }
+
+    const before = await t.run((ctx) =>
+      ctx.db.query('loggingStreaks').collect(),
+    )
+    expect(before).toHaveLength(1)
+    expect(before[0]).toMatchObject({
+      startDateKey: '2026-07-09',
+      endDateKey: '2026-07-11',
+      length: 3,
+    })
+
+    const middle = await t.query(api.mealEntries.day, { dateKey: '2026-07-10' })
+    await t.mutation(api.mealEntries.remove, { mealId: middle!.meals[0]._id })
+
+    const after = await t.run((ctx) =>
+      ctx.db
+        .query('loggingStreaks')
+        .withIndex('by_ownerTokenIdentifier_and_startDateKey', (q) =>
+          q.eq('ownerTokenIdentifier', token),
+        )
+        .collect(),
+    )
+    expect(
+      after.map((streak) => ({
+        start: streak.startDateKey,
+        end: streak.endDateKey,
+        length: streak.length,
+      })),
+    ).toEqual([
+      { start: '2026-07-09', end: '2026-07-09', length: 1 },
+      { start: '2026-07-11', end: '2026-07-11', length: 1 },
+    ])
+
+    await expect(
+      t.query(api.mealEntries.day, { dateKey: '2026-07-10' }),
+    ).resolves.toMatchObject({ totalCalories: 0, mealCount: 0, meals: [] })
+
+    const dashboard = await t.query(api.statistics.dashboard, {
+      todayDateKey: '2026-07-11',
+    })
+    // The broken streak drops the current run to the single day ending today,
+    // but the longest-streak achievement stays at its 3-day high-water mark.
+    expect(dashboard).toMatchObject({
+      logging: { currentStreak: 1, longestStreak: 3 },
+    })
+
+    const account = await t.run((ctx) =>
+      ctx.db.query('accountStatistics').first(),
+    )
+    expect(account?.loggedDayCount).toBe(2)
+  })
+
   it('upserts same-day weight and keeps accounts isolated', async () => {
     const base = convexTest(schema, modules)
     const owner = base.withIdentity({

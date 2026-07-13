@@ -24,6 +24,7 @@ import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { ConvexReactClient } from 'convex/react'
 import { ConvexProviderWithClerk } from 'convex/react-clerk'
 import { Button } from '@/components/ui/button'
+import { Toaster } from '@/components/ui/sonner'
 
 import appCss from '../styles.css?url'
 
@@ -118,6 +119,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           </header>
         )}
         {children}
+        <Toaster position="bottom-center" />
         <TanStackDevtools
           config={{
             position: 'bottom-right',

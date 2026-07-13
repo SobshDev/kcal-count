@@ -8,7 +8,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react'
-import { useAction, useMutation, useQuery } from 'convex/react'
+import { useAction, useMutation } from 'convex/react'
 import { useAuth } from '@clerk/tanstack-react-start'
 import { useNavigate } from '@tanstack/react-router'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { DailyMeals } from '@/components/dashboard/daily-meals'
 import { cn } from '@/lib/utils'
 
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024
@@ -38,7 +39,6 @@ export function AddFoodCard() {
   const { isSignedIn } = useAuth()
   const navigate = useNavigate()
   const dateKey = useMemo(getLocalDateKey, [])
-  const day = useQuery(api.mealEntries.day, { dateKey })
   const analyzeMeal = useAction(api.ai.analyzeMeal)
   const generateUploadUrl = useMutation(api.mealPhotos.generateUploadUrl)
   const registerPhoto = useMutation(api.mealPhotos.register)
@@ -260,76 +260,7 @@ export function AddFoodCard() {
         </Card>
       </form>
 
-      <section aria-labelledby="today-calories-heading">
-        <div className="flex items-end justify-between gap-6 border-b border-white/10 pb-4">
-          <div>
-            <h2
-              id="today-calories-heading"
-              className="text-sm font-medium text-white/60"
-            >
-              Today
-            </h2>
-            {day === undefined ? (
-              <div className="mt-2 h-9 w-36 animate-pulse rounded-lg bg-white/8" />
-            ) : (
-              <p className="mt-1 text-3xl font-semibold tracking-[-0.035em] tabular-nums">
-                {(day?.totalCalories ?? 0).toLocaleString()}
-                <span className="ml-2 text-base font-normal text-white/45">
-                  kcal
-                </span>
-              </p>
-            )}
-          </div>
-          {day !== undefined ? (
-            <p className="pb-1 text-sm text-white/45">
-              {day?.mealCount ?? 0}{' '}
-              {(day?.mealCount ?? 0) === 1 ? 'meal' : 'meals'}
-            </p>
-          ) : null}
-        </div>
-
-        {day === undefined ? (
-          <div className="space-y-3 py-5" aria-label="Loading today’s meals">
-            <div className="h-12 animate-pulse rounded-xl bg-white/[0.04]" />
-            <div className="h-12 animate-pulse rounded-xl bg-white/[0.04]" />
-          </div>
-        ) : day?.meals.length ? (
-          <ul className="divide-y divide-white/8">
-            {day.meals.map((meal) => (
-              <li
-                key={meal._id}
-                className="flex items-center justify-between gap-6 py-4"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  {meal.photoUrl ? (
-                    <img
-                      src={meal.photoUrl}
-                      alt=""
-                      className="size-11 shrink-0 rounded-xl object-cover"
-                    />
-                  ) : null}
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-white/85">
-                      {meal.name}
-                    </p>
-                    <p className="mt-1 text-xs text-white/40">
-                      {meal.proteinGrams}g protein · {meal.carbohydrateGrams}g
-                      carbs · {meal.fatGrams}g fat
-                    </p>
-                  </div>
-                </div>
-                <p className="shrink-0 text-sm font-medium tabular-nums text-white/70">
-                  {meal.calories.toLocaleString()} kcal
-                </p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="py-6 text-sm leading-6 text-white/45">
-            No meals yet. Describe your first meal above.
-          </p>
-        )}
-      </section>
+      <DailyMeals dateKey={dateKey} />
     </div>
   )
 }

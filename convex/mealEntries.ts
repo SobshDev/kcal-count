@@ -1,8 +1,8 @@
 import { ConvexError, v } from 'convex/values'
 
-import { internalMutation, query } from './_generated/server'
+import { internalMutation, mutation, query } from './_generated/server'
 import { mealConfidenceValidator, validateDateKey } from './mealEntriesModel'
-import { aggregateMeal } from './statisticsAggregation'
+import { aggregateMeal, deaggregateMeal } from './statisticsAggregation'
 import { mealCategoryValidator } from './statisticsModel'
 
 export const day = query({
@@ -120,5 +120,74 @@ export const saveAnalyzed = internalMutation({
     }
 
     return { mealId, totalCalories, mealCount }
+  },
+})
+
+export const remove = mutation({
+  args: { mealId: v.id('mealEntries') },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new ConvexError({
+        code: 'UNAUTHENTICATED',
+        message: 'You must be signed in to delete a meal',
+      })
+    }
+
+    const meal = await ctx.db.get(args.mealId)
+    if (!meal || meal.ownerTokenIdentifier !== identity.tokenIdentifier) {
+      throw new ConvexError({
+        code: 'MEAL_NOT_FOUND',
+        message: 'This meal was not found',
+      })
+    }
+
+    const now = Date.now()
+
+    // Reverse the lightweight per-day calorie rollup maintained by saveAnalyzed.
+    const calorieTotal = await ctx.db
+      .query('dailyCalorieTotals')
+      .withIndex('by_ownerTokenIdentifier_and_dateKey', (q) =>
+        q
+          .eq('ownerTokenIdentifier', identity.tokenIdentifier)
+          .eq('dateKey', meal.dateKey),
+      )
+      .unique()
+    if (calorieTotal) {
+      const mealCount = calorieTotal.mealCount - 1
+      if (mealCount <= 0) {
+        await ctx.db.delete(calorieTotal._id)
+      } else {
+        await ctx.db.patch(calorieTotal._id, {
+          totalCalories: Math.max(
+            0,
+            calorieTotal.totalCalories - meal.calories,
+          ),
+          mealCount,
+          updatedAt: now,
+        })
+      }
+    }
+
+    // Reverse the richer statistics aggregates for meals that were aggregated
+    // (statisticsVersion is set once a meal has been folded into the totals).
+    if (meal.statisticsVersion !== undefined) {
+      await deaggregateMeal(ctx, identity.tokenIdentifier, meal, now)
+    }
+
+    // Drop the photo record and its stored blob.
+    const photoStorageId = meal.photoStorageId
+    if (photoStorageId) {
+      const photo = await ctx.db
+        .query('mealPhotos')
+        .withIndex('by_storageId', (q) => q.eq('storageId', photoStorageId))
+        .unique()
+      if (photo) await ctx.db.delete(photo._id)
+      await ctx.storage.delete(photoStorageId)
+    }
+
+    await ctx.db.delete(meal._id)
+
+    return { mealId: meal._id }
   },
 })

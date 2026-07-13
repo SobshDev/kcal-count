@@ -103,6 +103,66 @@ export async function aggregateMeal(
   }
 }
 
+export async function deaggregateMeal(
+  ctx: DatabaseWriterCtx,
+  ownerTokenIdentifier: string,
+  meal: MealForAggregation,
+  now = Date.now(),
+) {
+  const existing = await ctx.db
+    .query('dailyNutritionTotals')
+    .withIndex('by_ownerTokenIdentifier_and_dateKey', (q) =>
+      q
+        .eq('ownerTokenIdentifier', ownerTokenIdentifier)
+        .eq('dateKey', meal.dateKey),
+    )
+    .unique()
+
+  let becameEmpty = false
+  if (existing) {
+    const mealCount = existing.mealCount - 1
+    if (mealCount <= 0) {
+      await ctx.db.delete(existing._id)
+      becameEmpty = true
+    } else {
+      const isComplete =
+        meal.fiberGrams !== undefined &&
+        meal.fruitVegetableGrams !== undefined &&
+        meal.addedSugarGrams !== undefined &&
+        meal.saturatedFatGrams !== undefined &&
+        meal.sodiumMg !== undefined &&
+        meal.totalWaterMl !== undefined
+      const categoryField = meal.mealCategory
+        ? (`${meal.mealCategory}Calories` as const)
+        : ('uncategorizedCalories' as const)
+      await ctx.db.patch(existing._id, {
+        mealCount,
+        completeNutritionMealCount:
+          existing.completeNutritionMealCount - (isComplete ? 1 : 0),
+        calories: existing.calories - meal.calories,
+        proteinGrams: existing.proteinGrams - meal.proteinGrams,
+        carbohydrateGrams: existing.carbohydrateGrams - meal.carbohydrateGrams,
+        fatGrams: existing.fatGrams - meal.fatGrams,
+        fiberGrams: existing.fiberGrams - (meal.fiberGrams ?? 0),
+        fruitVegetableGrams:
+          existing.fruitVegetableGrams - (meal.fruitVegetableGrams ?? 0),
+        addedSugarGrams: existing.addedSugarGrams - (meal.addedSugarGrams ?? 0),
+        saturatedFatGrams:
+          existing.saturatedFatGrams - (meal.saturatedFatGrams ?? 0),
+        sodiumMg: existing.sodiumMg - (meal.sodiumMg ?? 0),
+        totalWaterMl: existing.totalWaterMl - (meal.totalWaterMl ?? 0),
+        [categoryField]: existing[categoryField] - meal.calories,
+        updatedAt: now,
+      })
+    }
+  }
+
+  await deaggregateFood(ctx, ownerTokenIdentifier, meal, now)
+  if (becameEmpty) {
+    await removeLoggedDay(ctx, ownerTokenIdentifier, meal.dateKey, now)
+  }
+}
+
 async function aggregateFood(
   ctx: DatabaseWriterCtx,
   ownerTokenIdentifier: string,
@@ -134,6 +194,110 @@ async function aggregateFood(
       displayName: meal.name,
       count: 1,
       calories: meal.calories,
+      updatedAt: now,
+    })
+  }
+}
+
+async function deaggregateFood(
+  ctx: DatabaseWriterCtx,
+  ownerTokenIdentifier: string,
+  meal: MealForAggregation,
+  now: number,
+) {
+  const normalizedName = normalizeFoodName(meal.name)
+  const existing = await ctx.db
+    .query('dailyFoodTotals')
+    .withIndex('by_ownerTokenIdentifier_and_dateKey_and_normalizedName', (q) =>
+      q
+        .eq('ownerTokenIdentifier', ownerTokenIdentifier)
+        .eq('dateKey', meal.dateKey)
+        .eq('normalizedName', normalizedName),
+    )
+    .unique()
+  if (!existing) return
+  const count = existing.count - 1
+  if (count <= 0) {
+    await ctx.db.delete(existing._id)
+  } else {
+    await ctx.db.patch(existing._id, {
+      count,
+      calories: existing.calories - meal.calories,
+      updatedAt: now,
+    })
+  }
+}
+
+async function removeLoggedDay(
+  ctx: DatabaseWriterCtx,
+  ownerTokenIdentifier: string,
+  dateKey: string,
+  now: number,
+) {
+  // Find the streak that covers `dateKey`: the one with the largest start on or
+  // before it. Streaks are disjoint and non-adjacent, so if the day is logged
+  // this streak is the sole one containing it.
+  const streak = await ctx.db
+    .query('loggingStreaks')
+    .withIndex('by_ownerTokenIdentifier_and_startDateKey', (q) =>
+      q
+        .eq('ownerTokenIdentifier', ownerTokenIdentifier)
+        .lte('startDateKey', dateKey),
+    )
+    .order('desc')
+    .first()
+
+  if (streak && streak.endDateKey >= dateKey) {
+    const atStart = streak.startDateKey === dateKey
+    const atEnd = streak.endDateKey === dateKey
+    if (atStart && atEnd) {
+      await ctx.db.delete(streak._id)
+    } else if (atStart) {
+      const startDateKey = shiftDateKey(dateKey, 1)
+      await ctx.db.patch(streak._id, {
+        startDateKey,
+        length: daysBetween(startDateKey, streak.endDateKey) + 1,
+        updatedAt: now,
+      })
+    } else if (atEnd) {
+      const endDateKey = shiftDateKey(dateKey, -1)
+      await ctx.db.patch(streak._id, {
+        endDateKey,
+        length: daysBetween(streak.startDateKey, endDateKey) + 1,
+        updatedAt: now,
+      })
+    } else {
+      // The day sits in the middle: shorten this streak to end the day before
+      // and insert a fresh streak for the days after.
+      const leftEnd = shiftDateKey(dateKey, -1)
+      const rightStart = shiftDateKey(dateKey, 1)
+      await ctx.db.patch(streak._id, {
+        endDateKey: leftEnd,
+        length: daysBetween(streak.startDateKey, leftEnd) + 1,
+        updatedAt: now,
+      })
+      await ctx.db.insert('loggingStreaks', {
+        ownerTokenIdentifier,
+        startDateKey: rightStart,
+        endDateKey: streak.endDateKey,
+        length: daysBetween(rightStart, streak.endDateKey) + 1,
+        updatedAt: now,
+      })
+    }
+  }
+
+  const account = await ctx.db
+    .query('accountStatistics')
+    .withIndex('by_ownerTokenIdentifier', (q) =>
+      q.eq('ownerTokenIdentifier', ownerTokenIdentifier),
+    )
+    .unique()
+  if (account) {
+    // `longestStreak` is a historical high-water mark and is intentionally left
+    // untouched — recomputing the true maximum would require scanning every
+    // streak, and a past achievement shouldn't retroactively shrink.
+    await ctx.db.patch(account._id, {
+      loggedDayCount: Math.max(0, account.loggedDayCount - 1),
       updatedAt: now,
     })
   }
