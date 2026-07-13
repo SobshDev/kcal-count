@@ -1,9 +1,14 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 import { FloatingNavbar } from '@/components/dashboard/floating-navbar'
 import { StatisticsDashboard } from '@/components/statistics/statistics-dashboard'
 
 export const Route = createFileRoute('/statistics/')({
+  beforeLoad: ({ context }) => {
+    if (!context.userId) {
+      throw redirect({ to: '/sign-in/$', params: { _splat: '' } })
+    }
+  },
   component: StatisticsPage,
 })
 
