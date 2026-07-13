@@ -9,6 +9,8 @@ import {
   X,
 } from 'lucide-react'
 import { useAction, useMutation, useQuery } from 'convex/react'
+import { useAuth } from '@clerk/tanstack-react-start'
+import { useNavigate } from '@tanstack/react-router'
 import type { Id } from '../../../convex/_generated/dataModel'
 
 import { api } from '../../../convex/_generated/api'
@@ -33,6 +35,8 @@ type Photo = {
 }
 
 export function AddFoodCard() {
+  const { isSignedIn } = useAuth()
+  const navigate = useNavigate()
   const dateKey = useMemo(getLocalDateKey, [])
   const day = useQuery(api.mealEntries.day, { dateKey })
   const analyzeMeal = useAction(api.ai.analyzeMeal)
@@ -78,6 +82,10 @@ export function AddFoodCard() {
     event.preventDefault()
     const description = note.trim()
     if ((!description && !photo) || isSubmitting) return
+    if (!isSignedIn) {
+      await navigate({ to: '/sign-in/$', params: { _splat: '' } })
+      return
+    }
 
     setIsSubmitting(true)
     setError(null)

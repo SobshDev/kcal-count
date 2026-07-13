@@ -1,9 +1,16 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 import { FloatingNavbar } from '@/components/dashboard/floating-navbar'
 import { ChatPanel } from '@/components/chat/chat-panel'
 
-export const Route = createFileRoute('/chat/')({ component: ChatPage })
+export const Route = createFileRoute('/chat/')({
+  beforeLoad: ({ context }) => {
+    if (!context.userId) {
+      throw redirect({ to: '/sign-in/$', params: { _splat: '' } })
+    }
+  },
+  component: ChatPage,
+})
 
 function ChatPage() {
   return (
