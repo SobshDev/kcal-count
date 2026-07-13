@@ -18,6 +18,7 @@ import type * as dailyObjectives from "../dailyObjectives.js";
 import type * as mealAnalysis from "../mealAnalysis.js";
 import type * as mealEntries from "../mealEntries.js";
 import type * as mealEntriesModel from "../mealEntriesModel.js";
+import type * as mealPhotoValidation from "../mealPhotoValidation.js";
 import type * as mealPhotos from "../mealPhotos.js";
 import type * as migrations from "../migrations.js";
 import type * as nutritionCalculator from "../nutritionCalculator.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   mealAnalysis: typeof mealAnalysis;
   mealEntries: typeof mealEntries;
   mealEntriesModel: typeof mealEntriesModel;
+  mealPhotoValidation: typeof mealPhotoValidation;
   mealPhotos: typeof mealPhotos;
   migrations: typeof migrations;
   nutritionCalculator: typeof nutritionCalculator;

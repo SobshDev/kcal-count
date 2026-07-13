@@ -26,8 +26,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { DailyMeals } from '@/components/dashboard/daily-meals'
 import { cn } from '@/lib/utils'
+import { resizeImageForAnalysis } from '@/lib/resize-image'
 
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024
+const MAX_SOURCE_PHOTO_BYTES = 25 * 1024 * 1024
 
 type Photo = {
   file: File
@@ -41,11 +43,12 @@ export function AddFoodCard() {
   const dateKey = useMemo(getLocalDateKey, [])
   const analyzeMeal = useAction(api.ai.analyzeMeal)
   const generateUploadUrl = useMutation(api.mealPhotos.generateUploadUrl)
-  const registerPhoto = useMutation(api.mealPhotos.register)
+  const registerPhoto = useAction(api.mealPhotoValidation.validateAndRegister)
   const inputRef = useRef<HTMLInputElement>(null)
   const [note, setNote] = useState('')
   const [photo, setPhoto] = useState<Photo | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [isPreparingPhoto, setIsPreparingPhoto] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmation, setConfirmation] = useState<string | null>(null)
@@ -58,19 +61,35 @@ export function AddFoodCard() {
     }
   }, [])
 
-  function addFile(file: File | undefined) {
+  async function addFile(file: File | undefined) {
     if (!file) return
     setError(null)
     if (!file.type.startsWith('image/')) {
       setError('Choose a valid image file')
       return
     }
-    if (file.size > MAX_PHOTO_BYTES) {
-      setError('Meal photos must be 8 MB or smaller')
+    if (file.size > MAX_SOURCE_PHOTO_BYTES) {
+      setError('Meal photos must be 25 MB or smaller')
       return
     }
-    if (photo) URL.revokeObjectURL(photo.url)
-    setPhoto({ file, url: URL.createObjectURL(file), name: file.name })
+    setIsPreparingPhoto(true)
+    try {
+      const resizedFile = await resizeImageForAnalysis(file)
+      if (resizedFile.size > MAX_PHOTO_BYTES) {
+        setError('Meal photos must be 8 MB or smaller after resizing')
+        return
+      }
+      if (photo) URL.revokeObjectURL(photo.url)
+      setPhoto({
+        file: resizedFile,
+        url: URL.createObjectURL(resizedFile),
+        name: resizedFile.name,
+      })
+    } catch {
+      setError('Could not prepare this image. Try another photo.')
+    } finally {
+      setIsPreparingPhoto(false)
+    }
   }
 
   function removePhoto() {
@@ -123,7 +142,10 @@ export function AddFoodCard() {
     }
   }
 
-  const canSubmit = (note.trim().length > 0 || photo !== null) && !isSubmitting
+  const canSubmit =
+    (note.trim().length > 0 || photo !== null) &&
+    !isSubmitting &&
+    !isPreparingPhoto
 
   return (
     <div className="space-y-8">
@@ -137,7 +159,7 @@ export function AddFoodCard() {
           onDrop={(event) => {
             event.preventDefault()
             setDragging(false)
-            addFile(event.dataTransfer.files[0])
+            void addFile(event.dataTransfer.files[0])
           }}
           className={cn(
             'gap-4 border-white/10 bg-white/[0.04] shadow-[0_24px_70px_-24px_rgba(0,0,0,0.7)] backdrop-blur-md transition-colors',
@@ -160,7 +182,7 @@ export function AddFoodCard() {
               id="food-note"
               value={note}
               maxLength={2_000}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isPreparingPhoto}
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? 'food-error' : 'food-help'}
               onChange={(event) => setNote(event.target.value)}
@@ -236,7 +258,11 @@ export function AddFoodCard() {
               className="border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white"
             >
               <ImagePlus aria-hidden="true" />
-              {photo ? 'Replace photo' : 'Photo'}
+              {isPreparingPhoto
+                ? 'Preparing photo'
+                : photo
+                  ? 'Replace photo'
+                  : 'Photo'}
             </Button>
             <Button type="submit" size="lg" disabled={!canSubmit}>
               {isSubmitting ? (
@@ -253,7 +279,7 @@ export function AddFoodCard() {
             accept="image/*"
             className="hidden"
             onChange={(event) => {
-              addFile(event.target.files?.[0])
+              void addFile(event.target.files?.[0])
               event.target.value = ''
             }}
           />
