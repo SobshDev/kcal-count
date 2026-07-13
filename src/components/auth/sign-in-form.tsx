@@ -34,7 +34,10 @@ export function SignInForm() {
       const result = await signIn.password({ emailAddress: email, password })
       if (result.error) return setError(result.error.message)
       if (signIn.status === 'complete') return await finish()
-      if (signIn.status === 'needs_second_factor') {
+      if (
+        signIn.status === 'needs_second_factor' ||
+        signIn.status === 'needs_client_trust'
+      ) {
         if (
           !signIn.supportedSecondFactors.some(
             ({ strategy }) => strategy === 'email_code',
