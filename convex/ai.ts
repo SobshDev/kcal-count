@@ -34,6 +34,7 @@ const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions'
 const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-5.6-luna'
 const MEAL_ANALYSIS_MAX_OUTPUT_TOKENS = 400
 const MEAL_PHOTO_TOKEN_RESERVATION = 4_096
+const MEAL_WEB_SEARCH_TOKEN_RESERVATION = 4_096
 
 export const MEAL_ANALYSIS_SYSTEM_PROMPT = `Estimate the nutrition for the described or photographed meal.
 
@@ -240,7 +241,9 @@ export const analyzeMeal = action({
       calculateReservationOrThrow(
         analysisMessages,
         MEAL_ANALYSIS_MAX_OUTPUT_TOKENS,
-      ) + (photo ? MEAL_PHOTO_TOKEN_RESERVATION : 0)
+      ) +
+      MEAL_WEB_SEARCH_TOKEN_RESERVATION +
+      (photo ? MEAL_PHOTO_TOKEN_RESERVATION : 0)
 
     const completion = await requestOpenRouterCompletion(
       ctx,
