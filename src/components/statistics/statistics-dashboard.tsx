@@ -1,7 +1,6 @@
 import {
   CalendarCheck,
   Flame,
-  Settings,
   TrendingDown,
   TrendingUp,
   Trophy,
@@ -28,7 +27,6 @@ import {
 
 import { api } from '../../../convex/_generated/api'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
   Card,
   CardAction,
@@ -50,6 +48,7 @@ import { Progress } from '@/components/ui/progress'
 import { useMounted } from '@/lib/use-mounted'
 import { cn } from '@/lib/utils'
 import { RangeBar } from './charts'
+import { EmptyStatisticsState } from './empty-statistics-state'
 
 const GLASS =
   'border-white/10 bg-white/[0.04] shadow-[0_24px_70px_-24px_rgba(0,0,0,0.7)] backdrop-blur-md'
@@ -88,6 +87,9 @@ export function StatisticsDashboard() {
   if (data === null) {
     return <EmptyCard title="Sign in to see your statistics" />
   }
+  if (!data.targets.length) {
+    return <EmptyStatisticsState />
+  }
 
   const calorieTarget = getTarget(data.targets, 'calories')
   const proteinTarget = getTarget(data.targets, 'protein')
@@ -118,24 +120,6 @@ export function StatisticsDashboard() {
 
   return (
     <div>
-      {!data.targets.length ? (
-        <Card className={cn(GLASS, 'mb-6')}>
-          <CardContent className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <div>
-              <p className="font-medium">Add your daily objectives</p>
-              <p className="mt-1 text-sm text-white/55">
-                Set your profile to compare nutrition with personalized goals.
-              </p>
-            </div>
-            <Button asChild variant="outline">
-              <a href="/settings">
-                <Settings aria-hidden="true" /> Settings
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
       <Section title="Today">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
