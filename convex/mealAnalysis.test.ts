@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { parseMealAnalysis } from './mealAnalysis'
-import { MEAL_ANALYSIS_SYSTEM_PROMPT } from './ai'
+import { MEAL_ANALYSIS_SYSTEM_PROMPT, MEAL_WEB_SEARCH_TOOL } from './ai'
 
 describe('meal analysis parsing', () => {
   it('requires exact packaged-product identification and nutrition checks', () => {
@@ -12,6 +12,17 @@ describe('meal analysis parsing', () => {
     expect(MEAL_ANALYSIS_SYSTEM_PROMPT).toMatch(
       /calories.*protein.*carbohydrate.*fat/i,
     )
+    expect(MEAL_ANALYSIS_SYSTEM_PROMPT).toMatch(/use web search to verify/i)
+    expect(MEAL_WEB_SEARCH_TOOL).toEqual({
+      type: 'openrouter:web_search',
+      parameters: {
+        engine: 'auto',
+        max_results: 3,
+        max_total_results: 3,
+        max_characters: 2_000,
+        excluded_domains: ['reddit.com'],
+      },
+    })
   })
 
   it('normalizes a structured nutrition estimate', () => {
