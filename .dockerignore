@@ -1,0 +1,15 @@
+.git
+.github
+.claude
+.agents
+.codex
+.env
+.env.*
+!.env.example
+node_modules
+dist
+.output
+.tmp
+coverage
+*.log
+.DS_Store
