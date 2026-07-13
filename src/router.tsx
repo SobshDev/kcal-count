@@ -33,6 +33,11 @@ export function getRouter() {
     scrollRestoration: true,
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
+    // Surface each route's pendingComponent skeleton quickly during navigation
+    // (the default is 1s, which rarely fires), while defaultPendingMinMs keeps
+    // it on screen long enough to avoid a flash on fast loads.
+    defaultPendingMs: 150,
+    defaultPendingMinMs: 400,
   })
 
   setupRouterSsrQueryIntegration({ router, queryClient })
