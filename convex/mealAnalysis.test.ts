@@ -12,7 +12,10 @@ describe('meal analysis parsing', () => {
     expect(MEAL_ANALYSIS_SYSTEM_PROMPT).toMatch(
       /calories.*protein.*carbohydrate.*fat/i,
     )
-    expect(MEAL_ANALYSIS_SYSTEM_PROMPT).toMatch(/use web search to verify/i)
+    expect(MEAL_ANALYSIS_SYSTEM_PROMPT).toMatch(
+      /photo or description.*use web search to verify/i,
+    )
+    expect(MEAL_ANALYSIS_SYSTEM_PROMPT).toMatch(/restaurant dishes/i)
     expect(MEAL_WEB_SEARCH_TOOL).toEqual({
       type: 'openrouter:web_search',
       parameters: {

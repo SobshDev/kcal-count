@@ -37,7 +37,7 @@ const MEAL_PHOTO_TOKEN_RESERVATION = 4_096
 
 export const MEAL_ANALYSIS_SYSTEM_PROMPT = `Estimate the nutrition for the described or photographed meal.
 
-For packaged food or drinks, carefully read the visible branding, product line, flavor or edition, package size, and nutrition claims. Text may be sideways or upside down, so mentally rotate the image as needed. Identify the exact product before estimating its nutrition. When a photo shows a branded product but its nutrition panel is not readable, use web search to verify nutrition for that exact product, variant, and package size. Do not search for ordinary unbranded meals or when the visible nutrition information is sufficient. Do not substitute a visually similar brand or assume a regular product is sugar-free, zero-calorie, diet, or another variant unless the label, description, or reliable search result supports it.
+For packaged food or drinks, carefully read the visible branding, product line, flavor or edition, package size, and nutrition claims. Text may be sideways or upside down, so mentally rotate the image as needed. Identify the exact product before estimating its nutrition. When a photo or description identifies a branded product but its nutrition panel is not available, use web search to verify nutrition for that exact product, variant, and package size. For restaurant dishes, named recipes, regional dishes, or other described meals, use web search when reliable results would materially improve the estimate. Do not search when the supplied information and standard nutrition knowledge are sufficient. Do not substitute a visually similar brand or assume a regular product is sugar-free, zero-calorie, diet, or another variant unless the label, description, or reliable search result supports it.
 
 Use typical portions when quantities are missing. Include fiber, fruit and vegetable weight, added sugar, saturated fat, sodium, and total water from food and drinks. Cross-check that calories are reasonably consistent with the estimated protein, carbohydrate, and fat. Return only the requested JSON. Keep the meal name concise and include the brand and variant when identifiable. Nutrition values must describe the entire meal.`
 
@@ -248,7 +248,7 @@ export const analyzeMeal = action({
       MEAL_ANALYSIS_MAX_OUTPUT_TOKENS,
       reservedTokens,
       mealAnalysisResponseFormat,
-      photo ? [MEAL_WEB_SEARCH_TOOL] : undefined,
+      [MEAL_WEB_SEARCH_TOOL],
     )
     const analysis = parseMealAnalysis(completion.content)
     const saved: {
