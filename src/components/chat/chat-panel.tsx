@@ -55,6 +55,7 @@ import {
   MessageScrollerViewport,
 } from '@/components/ui/message-scroller'
 import { Spinner } from '@/components/ui/spinner'
+import { getChatErrorMessage } from '@/lib/chat-error'
 
 // Full answers read far better as markdown, so request the ceiling the backend
 // allows (DEFAULT_MAX_OUTPUT_TOKENS is only 512).
@@ -130,7 +131,7 @@ function Conversation() {
         maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS,
       })
     } catch (caught) {
-      setError(getErrorMessage(caught))
+      setError(getChatErrorMessage(caught))
       setInput(content)
     } finally {
       setIsSending(false)
@@ -149,7 +150,7 @@ function Conversation() {
       await removeChat({ chatId: id })
       if (id === chatId) startNewChat()
     } catch (caught) {
-      setError(getErrorMessage(caught))
+      setError(getChatErrorMessage(caught))
     }
   }
 
@@ -364,7 +365,9 @@ function AssistantError({ message }: { message: Doc<'chatMessages'> }) {
       <div className="flex items-start gap-2 rounded-2xl border border-[oklch(0.5_0.11_25/0.35)] bg-[oklch(0.5_0.11_25/0.12)] px-3 py-2 text-sm text-[oklch(0.82_0.1_25)]">
         <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <span>
-          {message.error?.trim() || 'Something went wrong. Please try again.'}
+          {message.error?.trim()
+            ? getChatErrorMessage(message.error)
+            : 'Something went wrong. Please try again.'}
         </span>
       </div>
     </div>
@@ -453,22 +456,4 @@ function formatRelativeTime(timestamp: number) {
   const days = Math.round(hours / 24)
   if (days < 7) return `${days}d ago`
   return `${Math.round(days / 7)}w ago`
-}
-
-function getErrorMessage(error: unknown) {
-  if (typeof error === 'object' && error !== null) {
-    if (
-      'data' in error &&
-      typeof error.data === 'object' &&
-      error.data !== null &&
-      'message' in error.data &&
-      typeof error.data.message === 'string'
-    ) {
-      return error.data.message
-    }
-    if ('message' in error && typeof error.message === 'string') {
-      return error.message
-    }
-  }
-  return 'Could not send your message. Please try again.'
 }
