@@ -88,6 +88,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       location.pathname.startsWith('/dashboard') ||
       location.pathname.startsWith('/settings') ||
       location.pathname.startsWith('/statistics') ||
+      location.pathname.startsWith('/chat') ||
       location.pathname.startsWith('/sign-in') ||
       location.pathname.startsWith('/sign-up'),
   })

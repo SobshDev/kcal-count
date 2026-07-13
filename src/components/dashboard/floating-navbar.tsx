@@ -12,12 +12,13 @@ import { Button } from '@/components/ui/button'
 
 type NavItem = {
   label: string
-  to?: '/dashboard' | '/statistics' | '/settings'
+  to?: '/dashboard' | '/statistics' | '/chat' | '/settings'
 }
 
 const NAV_ITEMS: Array<NavItem> = [
   { label: 'Dashboard', to: '/dashboard' },
   { label: 'Statistics', to: '/statistics' },
+  { label: 'Coach', to: '/chat' },
   { label: 'Settings', to: '/settings' },
 ]
 

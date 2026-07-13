@@ -13,6 +13,7 @@ import {
 import { nutritionProfileValidator } from './nutritionProfiles'
 import { nutritionTargetValidator } from './nutritionTargets'
 import { accountTokenUsageValidator } from './tokenUsageModel'
+import { chatValidator, persistedChatMessageValidator } from './chatModel'
 import {
   accountStatisticsValidator,
   dailyFoodTotalValidator,
@@ -22,6 +23,18 @@ import {
 } from './statisticsModel'
 
 export default defineSchema({
+  chats: defineTable(chatValidator)
+    .index('by_ownerTokenIdentifier_and_updatedAt', [
+      'ownerTokenIdentifier',
+      'updatedAt',
+    ])
+    .index('by_expiresAt', ['expiresAt']),
+  chatMessages: defineTable(persistedChatMessageValidator)
+    .index('by_chatId_and_sequence', ['chatId', 'sequence'])
+    .index('by_ownerTokenIdentifier_and_chatId', [
+      'ownerTokenIdentifier',
+      'chatId',
+    ]),
   aiAccountLimits: defineTable(aiAccountLimitValidator).index(
     'by_ownerTokenIdentifier',
     ['ownerTokenIdentifier'],
