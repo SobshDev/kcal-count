@@ -35,6 +35,12 @@ const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-5.6-luna'
 const MEAL_ANALYSIS_MAX_OUTPUT_TOKENS = 400
 const MEAL_PHOTO_TOKEN_RESERVATION = 4_096
 
+export const MEAL_ANALYSIS_SYSTEM_PROMPT = `Estimate the nutrition for the described or photographed meal.
+
+For packaged food or drinks, carefully read the visible branding, product line, flavor or edition, package size, and nutrition claims. Text may be sideways or upside down, so mentally rotate the image as needed. Identify the exact product before estimating its nutrition, and use known nutrition for that exact product and package size when the nutrition panel is not visible. Do not substitute a visually similar brand or assume a regular product is sugar-free, zero-calorie, diet, or another variant unless the label or description supports it.
+
+Use typical portions when quantities are missing. Include fiber, fruit and vegetable weight, added sugar, saturated fat, sodium, and total water from food and drinks. Cross-check that calories are reasonably consistent with the estimated protein, carbohydrate, and fat. Return only the requested JSON. Keep the meal name concise and include the brand and variant when identifiable. Nutrition values must describe the entire meal.`
+
 type OpenRouterMessage =
   | ChatMessage
   | {
@@ -203,8 +209,7 @@ export const analyzeMeal = action({
     const analysisMessages: ChatMessage[] = [
       {
         role: 'system',
-        content:
-          'Estimate the nutrition for the described or photographed meal. Use typical portions when quantities are missing. Include fiber, fruit and vegetable weight, added sugar, saturated fat, sodium, and total water from food and drinks. Return only the requested JSON. Keep the meal name concise. Nutrition values must describe the entire meal.',
+        content: MEAL_ANALYSIS_SYSTEM_PROMPT,
       },
       { role: 'user', content: textPrompt },
     ]

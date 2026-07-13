@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest'
 
 import { parseMealAnalysis } from './mealAnalysis'
+import { MEAL_ANALYSIS_SYSTEM_PROMPT } from './ai'
 
 describe('meal analysis parsing', () => {
+  it('requires exact packaged-product identification and nutrition checks', () => {
+    expect(MEAL_ANALYSIS_SYSTEM_PROMPT).toMatch(/exact product/i)
+    expect(MEAL_ANALYSIS_SYSTEM_PROMPT).toMatch(/sideways or upside down/i)
+    expect(MEAL_ANALYSIS_SYSTEM_PROMPT).toMatch(/package size/i)
+    expect(MEAL_ANALYSIS_SYSTEM_PROMPT).toMatch(/assume.*zero-calorie/i)
+    expect(MEAL_ANALYSIS_SYSTEM_PROMPT).toMatch(
+      /calories.*protein.*carbohydrate.*fat/i,
+    )
+  })
+
   it('normalizes a structured nutrition estimate', () => {
     expect(
       parseMealAnalysis(
