@@ -7,8 +7,11 @@ import {
 } from 'motion/react'
 import { Link } from '@tanstack/react-router'
 import { Show, SignInButton, UserButton } from '@clerk/tanstack-react-start'
+import { useQuery } from 'convex/react'
+import { Coins } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { api } from '../../../convex/_generated/api'
 
 type NavItem = {
   label: string
@@ -84,7 +87,7 @@ export function FloatingNavbar() {
 
         <div className="flex items-center">
           <Show when="signed-in">
-            <UserButton />
+            <UserButtonWithTokens />
           </Show>
           <Show when="signed-out">
             <SignInButton mode="redirect">
@@ -100,5 +103,31 @@ export function FloatingNavbar() {
         </div>
       </motion.nav>
     </AnimatePresence>
+  )
+}
+
+/**
+ * User avatar button whose dropdown surfaces the account's remaining AI token
+ * budget. The count comes from the same `tokenUsage.current` query used
+ * elsewhere in the app, so it stays in sync with actual usage.
+ */
+function UserButtonWithTokens() {
+  const usage = useQuery(api.tokenUsage.current)
+
+  const tokensLabel =
+    usage == null
+      ? 'Tokens left: …'
+      : `Tokens left: ${usage.remainingTokens.toLocaleString()}`
+
+  return (
+    <UserButton>
+      <UserButton.MenuItems>
+        <UserButton.Action
+          label={tokensLabel}
+          labelIcon={<Coins className="size-4" />}
+          onClick={() => {}}
+        />
+      </UserButton.MenuItems>
+    </UserButton>
   )
 }

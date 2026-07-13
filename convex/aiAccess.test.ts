@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 import { convexTest } from 'convex-test'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { api, internal } from './_generated/api'
 import { AI_RATE_LIMIT_MAX_REQUESTS } from './aiPolicy'
@@ -63,6 +63,34 @@ describe('AI account access', () => {
     ).rejects.toMatchObject({
       data: { code: 'TOKENS_EXHAUSTED', remainingTokens: 0 },
     })
+  })
+
+  it('restores the account token allowance on the next UTC day', async () => {
+    const t = convexTest(schema, modules).withIdentity({
+      tokenIdentifier: 'https://clerk.test|daily-account',
+    })
+    const firstDay = Date.UTC(2026, 6, 12, 23, 59)
+    const secondDay = Date.UTC(2026, 6, 13, 0, 1)
+    vi.setSystemTime(firstDay)
+
+    const reservation = await t.mutation(internal.aiAccess.authorize, {
+      reservedTokens: 100_000,
+    })
+    await t.mutation(internal.aiAccess.complete, {
+      reservationId: reservation.reservationId,
+      inputTokens: 100_000,
+      outputTokens: 0,
+    })
+
+    vi.setSystemTime(secondDay)
+    await expect(t.query(api.tokenUsage.current, {})).resolves.toMatchObject({
+      totalTokens: 0,
+      remainingTokens: 100_000,
+    })
+    await expect(
+      t.mutation(internal.aiAccess.authorize, { reservedTokens: 100_000 }),
+    ).resolves.toMatchObject({ remainingTokens: 0 })
+    vi.useRealTimers()
   })
 
   it('limits each account to ten AI requests per minute', async () => {

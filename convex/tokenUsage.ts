@@ -2,7 +2,11 @@ import { v } from 'convex/values'
 
 import { internalMutation, query } from './_generated/server'
 import { DEFAULT_ACCOUNT_TOKEN_LIMIT } from './aiPolicy'
-import { addTokenUsage, validateTokenCount } from './tokenUsageModel'
+import {
+  addTokenUsage,
+  isUsageFromCurrentUtcDay,
+  validateTokenCount,
+} from './tokenUsageModel'
 
 const emptyUsage = {
   inputTokens: 0,
@@ -31,8 +35,11 @@ export const current = query({
       .unique()
     const tokenLimit = accountLimit?.tokenLimit ?? DEFAULT_ACCOUNT_TOKEN_LIMIT
     const reservedTokens = accountLimit?.reservedTokens ?? 0
+    const currentUsage = isUsageFromCurrentUtcDay(usage, Date.now())
+      ? usage
+      : null
 
-    if (!usage) {
+    if (!currentUsage) {
       return {
         ...emptyUsage,
         tokenLimit,
@@ -43,17 +50,17 @@ export const current = query({
     }
 
     return {
-      inputTokens: usage.inputTokens,
-      outputTokens: usage.outputTokens,
-      totalTokens: usage.totalTokens,
-      requestCount: usage.requestCount,
+      inputTokens: currentUsage.inputTokens,
+      outputTokens: currentUsage.outputTokens,
+      totalTokens: currentUsage.totalTokens,
+      requestCount: currentUsage.requestCount,
       tokenLimit,
       reservedTokens,
       remainingTokens: Math.max(
         0,
-        tokenLimit - usage.totalTokens - reservedTokens,
+        tokenLimit - currentUsage.totalTokens - reservedTokens,
       ),
-      updatedAt: usage.updatedAt,
+      updatedAt: currentUsage.updatedAt,
     }
   },
 })
@@ -77,8 +84,11 @@ export const record = internalMutation({
         q.eq('ownerTokenIdentifier', args.ownerTokenIdentifier),
       )
       .unique()
-    const totals = addTokenUsage(existing ?? emptyUsage, args)
     const updatedAt = Date.now()
+    const currentUsage = isUsageFromCurrentUtcDay(existing, updatedAt)
+      ? existing
+      : null
+    const totals = addTokenUsage(currentUsage ?? emptyUsage, args)
 
     if (existing) {
       await ctx.db.patch(existing._id, { ...totals, updatedAt })

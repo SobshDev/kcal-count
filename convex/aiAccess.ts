@@ -9,7 +9,11 @@ import {
   DEFAULT_ACCOUNT_TOKEN_LIMIT,
   getRateLimitState,
 } from './aiPolicy'
-import { addTokenUsage, validateTokenCount } from './tokenUsageModel'
+import {
+  addTokenUsage,
+  isUsageFromCurrentUtcDay,
+  validateTokenCount,
+} from './tokenUsageModel'
 
 const emptyUsage = {
   inputTokens: 0,
@@ -81,13 +85,14 @@ export const authorize = internalMutation({
       )
       .unique()
     const tokenLimit = accountLimit?.tokenLimit ?? DEFAULT_ACCOUNT_TOKEN_LIMIT
+    const currentUsage = isUsageFromCurrentUtcDay(usage, now) ? usage : null
     const reservedTokens = Math.max(
       0,
       (accountLimit?.reservedTokens ?? 0) - expiredTokenCount,
     )
     const remainingTokens = Math.max(
       0,
-      tokenLimit - (usage?.totalTokens ?? 0) - reservedTokens,
+      tokenLimit - (currentUsage?.totalTokens ?? 0) - reservedTokens,
     )
 
     if (args.reservedTokens > remainingTokens) {
@@ -173,8 +178,11 @@ export const complete = internalMutation({
         q.eq('ownerTokenIdentifier', ownerTokenIdentifier),
       )
       .unique()
-    const totals = addTokenUsage(existingUsage ?? emptyUsage, args)
     const now = Date.now()
+    const currentUsage = isUsageFromCurrentUtcDay(existingUsage, now)
+      ? existingUsage
+      : null
+    const totals = addTokenUsage(currentUsage ?? emptyUsage, args)
 
     if (existingUsage) {
       await ctx.db.patch(existingUsage._id, { ...totals, updatedAt: now })

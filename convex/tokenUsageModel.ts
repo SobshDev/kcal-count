@@ -17,6 +17,20 @@ export type TokenUsageIncrement = Pick<
   'inputTokens' | 'outputTokens'
 >
 
+export function isUsageFromCurrentUtcDay(
+  usage: Pick<AccountTokenUsage, 'updatedAt'> | null,
+  now: number,
+) {
+  if (!usage) return false
+  const usageDate = new Date(usage.updatedAt)
+  const currentDate = new Date(now)
+  return (
+    usageDate.getUTCFullYear() === currentDate.getUTCFullYear() &&
+    usageDate.getUTCMonth() === currentDate.getUTCMonth() &&
+    usageDate.getUTCDate() === currentDate.getUTCDate()
+  )
+}
+
 export function validateTokenCount(value: number, fieldName: string) {
   if (!Number.isSafeInteger(value) || value < 0) {
     throw new Error(`${fieldName} must be a non-negative safe integer`)
