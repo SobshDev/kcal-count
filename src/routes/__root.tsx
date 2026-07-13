@@ -71,7 +71,7 @@ function RootComponent() {
   const { convexClient } = useRouteContext({ from: Route.id })
 
   return (
-    <ClerkProvider appearance={{ theme: shadcn }}>
+    <ClerkProvider appearance={{ theme: shadcn }} signInUrl="/sign-in">
       <ConvexProviderWithClerk client={convexClient} useAuth={useAuth}>
         <RootDocument>
           <Outlet />
